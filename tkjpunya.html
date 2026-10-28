@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PC Hardware Link - Mahjong Connect</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Orbitron & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .tech-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .board-container {
+            position: relative;
+            box-shadow: 0 0 35px rgba(14, 165, 233, 0.25);
+        }
+        canvas {
+            display: block;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .pulse-btn {
+            animation: pulse-glow 2s infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); transform: scale(1); }
+            50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.8); transform: scale(1.03); }
+        }
+        /* Custom scrollbar for help modal */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0ea5e9;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-2 sm:p-4 overflow-x-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+
+    <!-- HEADER / HUD AREA -->
+    <header class="w-full max-w-4xl bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-3 shadow-2xl backdrop-blur-md mb-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            
+            <!-- LOGO & LEVEL -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-400 text-xl font-bold shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tech-font text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300 tracking-wider">
+                        HARDWARE LINK
+                    </h1>
+                    <div class="flex items-center gap-2">
+                        <span id="level-badge" class="bg-cyan-500/20 text-cyan-300 text-xs px-2 py-0.5 rounded-full border border-cyan-400/30 font-semibold tech-font">
+                            Stage 01
+                        </span>
+                        <span id="level-desc" class="text-[11px] text-cyan-200/70 hidden sm:inline font-mono">
+                            Standard Circuit
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATS (SCORE, COMBO, PAIRS) -->
+            <div class="flex items-center gap-3 sm:gap-4 bg-slate-950/70 px-3 sm:px-4 py-1.5 rounded-xl border border-slate-800/80">
+                <div class="text-center">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold font-mono">Score</p>
+                    <p id="score-text" class="text-base sm:text-xl font-black text-amber-400 tech-font">0</p>
+                </div>
+                <div class="w-px h-7 bg-slate-800"></div>
+                <div class="text-center">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold font-mono">Combo</p>
+                    <p id="combo-text" class="text-base sm:text-xl font-black text-cyan-400 tech-font">x1</p>
+                </div>
+                <div class="w-px h-7 bg-slate-800"></div>
+                <div class="text-center">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold font-mono">Pairs</p>
+                    <p id="pairs-text" class="text-base sm:text-xl font-black text-emerald-400 tech-font">0</p>
+                </div>
+            </div>
+
+            <!-- CONTROLS & AUDIO -->
+            <div class="flex items-center space-x-2">
+                <button id="btn-help" onclick="toggleHelpModal()" title="How to Play" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition active:scale-95 shadow-md">
+                    <i class="fa-solid fa-circle-question"></i>
+                </button>
+                <button id="btn-audio" onclick="toggleAudio()" title="Sound On/Off" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition active:scale-95 shadow-md">
+                    <i id="icon-audio" class="fa-solid fa-volume-high"></i>
+                </button>
+                <button id="btn-pause" onclick="togglePause()" title="Pause Game" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition active:scale-95 shadow-md">
+                    <i class="fa-solid fa-pause"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- TIMER PROGRESS BAR -->
+        <div class="mt-3 relative w-full bg-slate-950 h-3.5 rounded-full overflow-hidden p-0.5 border border-slate-800/90">
+            <div id="timer-bar" class="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-rose-500 rounded-full transition-all duration-300 w-full shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
+        </div>
+    </header>
+
+    <!-- ACTION POWER-UP TOOLBAR -->
+    <div class="w-full max-w-4xl flex items-center justify-center gap-3 mb-2">
+        <button id="btn-hint" onclick="useHint()" class="flex-1 max-w-[180px] bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-2 px-3 rounded-xl border border-cyan-400/40 shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-lightbulb text-yellow-300"></i>
+            <span class="text-xs sm:text-sm tech-font">Hint (<span id="hint-count">3</span>)</span>
+        </button>
+
+        <button id="btn-shuffle" onclick="useShuffle()" class="flex-1 max-w-[180px] bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2 px-3 rounded-xl border border-indigo-400/40 shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-shuffle text-cyan-300"></i>
+            <span class="text-xs sm:text-sm tech-font">Shuffle (<span id="shuffle-count">3</span>)</span>
+        </button>
+    </div>
+
+    <!-- MAIN GAME BOARD CANVAS & CONTAINERS -->
+    <main class="w-full max-w-4xl flex flex-col items-center justify-center relative my-auto">
+        <div id="canvas-wrapper" class="board-container rounded-2xl overflow-hidden bg-slate-950/80 border-2 border-cyan-500/30 p-1 relative shadow-2xl">
+            <canvas id="gameCanvas" class="rounded-xl cursor-pointer"></canvas>
+
+            <!-- START SCREEN OVERLAY -->
+            <div id="start-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="w-20 h-20 bg-cyan-500/10 border-2 border-cyan-400/50 rounded-3xl flex items-center justify-center text-cyan-400 text-4xl mb-4 animate-bounce shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+                    <i class="fa-solid fa-cpu"></i>
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-extrabold tech-font text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300 mb-2">
+                    PC HARDWARE LINK
+                </h2>
+                <p class="text-xs sm:text-sm text-cyan-200/80 max-w-md mb-6 leading-relaxed font-sans">
+                    Connect matching computer components (CPU, GPU, RAM, SSD, PSU...) with a line that turns no more than 2 times! Clear all components before time runs out.
+                </p>
+                <div class="flex gap-3">
+                    <button onclick="startGame()" class="pulse-btn bg-gradient-to-r from-cyan-500 via-sky-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-sm sm:text-base py-3.5 px-8 rounded-2xl shadow-xl border border-cyan-300/40 active:scale-95 transition tech-font tracking-wider">
+                        START GAME <i class="fa-solid fa-play ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PAUSE OVERLAY -->
+            <div id="pause-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+                <i class="fa-solid fa-pause text-amber-400 text-5xl mb-4 animate-pulse"></i>
+                <h3 class="text-2xl font-bold text-white mb-6 tech-font tracking-wider">SYSTEM PAUSED</h3>
+                <button onclick="togglePause()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-3 px-8 rounded-xl shadow-lg transition tech-font">
+                    RESUME <i class="fa-solid fa-play ml-1"></i>
+                </button>
+            </div>
+
+            <!-- GAME OVER / VICTORY OVERLAY -->
+            <div id="end-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 hidden">
+                <div id="end-icon" class="text-6xl mb-3"></div>
+                <h2 id="end-title" class="text-3xl sm:text-4xl font-black mb-2 tech-font"></h2>
+                <p id="end-subtitle" class="text-xs sm:text-sm text-slate-300 max-w-sm mb-6"></p>
+
+                <div class="bg-slate-900/90 border border-cyan-500/30 p-4 rounded-xl text-sm space-y-2 mb-6 w-full max-w-xs font-mono">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Final Score:</span>
+                        <span id="end-score" class="font-bold text-amber-400 text-lg tech-font">0</span>
+                    </div>
+                    <div class="flex justify-between border-t border-slate-800 pt-2">
+                        <span class="text-slate-400">Stage Cleared:</span>
+                        <span id="end-level" class="font-bold text-cyan-300 tech-font">0</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button id="end-action-btn" onclick="nextLevelOrRestart()" class="bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold py-3 px-6 rounded-xl shadow-lg transition tech-font">
+                        NEXT STAGE
+                    </button>
+                </div>
+            </div>
+
+            <!-- HOW TO PLAY MODAL -->
+            <div id="help-modal" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col p-5 text-left z-40 hidden overflow-y-auto">
+                <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3 mb-4">
+                    <h3 class="text-lg font-bold tech-font text-cyan-400 flex items-center gap-2">
+                        <i class="fa-solid fa-book"></i> HOW TO PLAY
+                    </h3>
+                    <button onclick="toggleHelpModal()" class="text-slate-400 hover:text-white text-xl">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-3 text-xs sm:text-sm text-slate-300 leading-relaxed font-sans pr-1">
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <p class="font-bold text-cyan-300 mb-1"><i class="fa-solid fa-link text-cyan-400 mr-1.5"></i> Link Matching Rules</p>
+                        <p>Select two matching computer components. They can be linked if the line connecting them makes **no more than 2 turns** (maximum 3 straight line segments) through empty spaces or around the grid edge.</p>
+                    </div>
+
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <p class="font-bold text-amber-300 mb-1"><i class="fa-solid fa-bolt text-amber-400 mr-1.5"></i> Combo System</p>
+                        <p>Match pairs rapidly to build your Combo Multiplier up to **x5** for massive bonus scores!</p>
+                    </div>
+
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <p class="font-bold text-emerald-300 mb-1"><i class="fa-solid fa-wand-magic-sparkles text-emerald-400 mr-1.5"></i> Stage Gravity Mechanics</p>
+                        <p>Starting from Stage 2, matching tiles will trigger grid shifts (Gravity Down, Left, Up, Right) to mix up the board layout!</p>
+                    </div>
+
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <p class="font-bold text-purple-300 mb-1"><i class="fa-solid fa-toolbox text-purple-400 mr-1.5"></i> Power-Ups</p>
+                        <p><strong class="text-cyan-300">Hint:</strong> Highlights a valid matching pair.<br><strong class="text-indigo-300">Shuffle:</strong> Re-arranges remaining tiles when stuck.</p>
+                    </div>
+                </div>
+
+                <button onclick="toggleHelpModal()" class="mt-4 w-full bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold py-2.5 rounded-xl border border-slate-700 transition tech-font text-xs uppercase tracking-wider">
+                    GOT IT, CLOSE
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="text-[11px] text-cyan-200/50 py-2 text-center font-mono">
+        PC Hardware Link &copy; Onet Mahjong Connect Tech Edition
+    </footer>
+
+    <!-- JAVASCRIPT GAME LOGIC -->
+    <script>
+        /* ==========================================================================
+           1. COMPUTER HARDWARE & COMPONENT VECTOR DRAWING FUNCTIONS
+           ========================================================================== */
+        const HARDWARE_TYPES = [
+            { id: 'cpu', name: 'CPU Processor', color: '#0284c7', bg: '#0f172a' },
+            { id: 'ram', name: 'RAM Memory', color: '#10b981', bg: '#064e3b' },
+            { id: 'gpu', name: 'Graphics Card', color: '#8b5cf6', bg: '#2e1065' },
+            { id: 'motherboard', name: 'Motherboard', color: '#059669', bg: '#022c22' },
+            { id: 'psu', name: 'Power Supply', color: '#d97706', bg: '#451a03' },
+            { id: 'ssd', name: 'M.2 NVMe SSD', color: '#ec4899', bg: '#500724' },
+            { id: 'hdd', name: 'Hard Disk Drive', color: '#64748b', bg: '#0f172a' },
+            { id: 'cooler', name: 'CPU Cooler Fan', color: '#06b6d4', bg: '#083344' },
+            { id: 'monitor', name: 'Gaming Monitor', color: '#3b82f6', bg: '#172554' },
+            { id: 'keyboard', name: 'Mechanical Keyboard', color: '#f43f5e', bg: '#4c0519' },
+            { id: 'mouse', name: 'Gaming Mouse', color: '#a855f7', bg: '#3b0764' },
+            { id: 'router', name: 'Wi-Fi Router', color: '#14b8a6', bg: '#042f2e' },
+            { id: 'nic', name: 'Network Card', color: '#6366f1', bg: '#1e1b4b' },
+            { id: 'flashdrive', name: 'USB Flash Drive', color: '#eab308', bg: '#422006' },
+            { id: 'soundcard', name: 'Audio Sound Card', color: '#f97316', bg: '#431407' },
+            { id: 'optical', name: 'DVD/Blu-Ray Drive', color: '#94a3b8', bg: '#1e293b' }
+        ];
+
+        function drawHardwareIcon(ctx, item, x, y, size) {
+            const cx = x + size / 2;
+            const cy = y + size / 2;
+            const s = size * 0.65; // scale factor
+
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            switch(item.id) {
+                case 'cpu': // CPU Processor
+                    // Green PCB Base
+                    ctx.fillStyle = '#059669';
+                    ctx.fillRect(-s*0.42, -s*0.42, s*0.84, s*0.84);
+                    // Gold corner contact dots
+                    ctx.fillStyle = '#eab308';
+                    ctx.fillRect(-s*0.4, -s*0.4, s*0.08, s*0.08);
+                    // Silver Heat Spreader
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.fillRect(-s*0.3, -s*0.3, s*0.6, s*0.6);
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.fillRect(-s*0.22, -s*0.22, s*0.44, s*0.44);
+                    // Chip Text/Lines
+                    ctx.fillStyle = '#334155';
+                    ctx.fillRect(-s*0.15, -s*0.05, s*0.3, s*0.1);
+                    break;
+
+                case 'ram': // RAM Stick
+                    // Dark Green/Black PCB
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(-s*0.45, -s*0.25, s*0.9, s*0.5);
+                    // Gold Contacts
+                    ctx.fillStyle = '#eab308';
+                    for(let i = -4; i <= 4; i++) {
+                        ctx.fillRect(i * s * 0.09 - s*0.03, s*0.16, s*0.05, s*0.09);
+                    }
+                    // Memory Chips
+                    ctx.fillStyle = '#1e293b';
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 1;
+                    for(let i = -3; i <= 3; i += 2) {
+                        ctx.fillRect(i * s * 0.11 - s*0.08, -s*0.18, s*0.14, s*0.28);
+                        ctx.strokeRect(i * s * 0.11 - s*0.08, -s*0.18, s*0.14, s*0.28);
+                    }
+                    break;
+
+                case 'gpu': // Graphics Card
+                    // Shroud
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.fillRect(-s*0.45, -s*0.3, s*0.9, s*0.6);
+                    // PCIe Connector
+                    ctx.fillStyle = '#eab308';
+                    ctx.fillRect(-s*0.3, s*0.3, s*0.6, s*0.06);
+                    // Dual Fans
+                    ctx.fillStyle = '#8b5cf6';
+                    ctx.beginPath();
+                    ctx.arc(-s*0.2, 0, s*0.18, 0, Math.PI*2);
+                    ctx.arc(s*0.2, 0, s*0.18, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(-s*0.2, 0, s*0.06, 0, Math.PI*2);
+                    ctx.arc(s*0.2, 0, s*0.06, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+
+                case 'motherboard': // Motherboard
+                    // Main Board
+                    ctx.fillStyle = '#022c22';
+                    ctx.fillRect(-s*0.42, -s*0.42, s*0.84, s*0.84);
+                    // Socket
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.fillRect(-s*0.15, -s*0.25, s*0.3, s*0.3);
+                    // RAM Slots
+                    ctx.fillStyle = '#10b981';
+                    ctx.fillRect(s*0.2, -s*0.3, s*0.06, s*0.5);
+                    ctx.fillRect(s*0.28, -s*0.3, s*0.06, s*0.5);
+                    // PCIe Slot
+                    ctx.fillStyle = '#059669';
+                    ctx.fillRect(-s*0.35, s*0.18, s*0.6, s*0.08);
+                    break;
+
+                case 'psu': // Power Supply
+                    // Outer Casing
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(-s*0.4, -s*0.35, s*0.8, s*0.7);
+                    // Fan Grill
+                    ctx.fillStyle = '#d97706';
+                    ctx.beginPath();
+                    ctx.arc(-s*0.08, 0, s*0.22, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(-s*0.08, 0, s*0.18, 0, Math.PI*2);
+                    ctx.fill();
+                    // Power Switch & Socket
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(s*0.22, -s*0.2, s*0.1, s*0.15);
+                    break;
+
+                case 'ssd': // M.2 SSD
+                    // PCB Stick
+                    ctx.fillStyle = '#064e3b';
+                    ctx.fillRect(-s*0.45, -s*0.18, s*0.9, s*0.36);
+                    // M.2 Notch
+                    ctx.fillStyle = '#eab308';
+                    ctx.fillRect(-s*0.45, -s*0.12, s*0.06, s*0.24);
+                    // Controller & NAND Flash
+                    ctx.fillStyle = '#ec4899';
+                    ctx.fillRect(-s*0.2, -s*0.12, s*0.2, s*0.24);
+                    ctx.fillRect(s*0.08, -s*0.12, s*0.25, s*0.24);
+                    break;
+
+                case 'hdd': // Hard Disk Drive
+                    // Metal Plate
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.fillRect(-s*0.35, -s*0.42, s*0.7, s*0.84);
+                    // Platter Circle
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.beginPath();
+                    ctx.arc(0, -s*0.08, s*0.25, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#64748b';
+                    ctx.beginPath();
+                    ctx.arc(0, -s*0.08, s*0.08, 0, Math.PI*2);
+                    ctx.fill();
+                    // Read/Write Head Arm
+                    ctx.strokeStyle = '#334155';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(s*0.18, s*0.2);
+                    ctx.lineTo(0, -s*0.08);
+                    ctx.stroke();
+                    break;
+
+                case 'cooler': // CPU Cooler / Fan
+                    ctx.fillStyle = '#0284c7';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, s*0.38, 0, Math.PI*2);
+                    ctx.fill();
+                    // Blades
+                    ctx.fillStyle = '#0f172a';
+                    for(let i = 0; i < 4; i++) {
+                        ctx.save();
+                        ctx.rotate((i * Math.PI) / 2);
+                        ctx.fillRect(-s*0.05, -s*0.32, s*0.1, s*0.32);
+                        ctx.restore();
+                    }
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, s*0.12, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+
+                case 'monitor': // Display Monitor
+                    // Screen Body
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(-s*0.42, -s*0.35, s*0.84, s*0.52);
+                    // Display Glass
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fillRect(-s*0.37, -s*0.3, s*0.74, s*0.42);
+                    // Stand
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillRect(-s*0.06, s*0.17, s*0.12, s*0.15);
+                    ctx.fillRect(-s*0.22, s*0.3, s*0.44, s*0.06);
+                    break;
+
+                case 'keyboard': // Keyboard
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(-s*0.45, -s*0.22, s*0.9, s*0.44);
+                    // Key Grid
+                    ctx.fillStyle = '#f43f5e';
+                    for(let r = -1; r <= 1; r++) {
+                        for(let c = -3; c <= 3; c++) {
+                            ctx.fillRect(c*s*0.11 - s*0.04, r*s*0.11 - s*0.04, s*0.08, s*0.08);
+                        }
+                    }
+                    break;
+
+                case 'mouse': // Gaming Mouse
+                    ctx.fillStyle = '#a855f7';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, s*0.22, s*0.38, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    // Scroll Wheel
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(-s*0.04, -s*0.25, s*0.08, s*0.14);
+                    // RGB Accents
+                    ctx.strokeStyle = '#c084fc';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(0, s*0.1, s*0.12, 0, Math.PI);
+                    ctx.stroke();
+                    break;
+
+                case 'router': // Wi-Fi Router
+                    // Body
+                    ctx.fillStyle = '#14b8a6';
+                    ctx.fillRect(-s*0.38, 0, s*0.76, s*0.3);
+                    // Antennas
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(-s*0.3, -s*0.38, s*0.06, s*0.38);
+                    ctx.fillRect(0, -s*0.38, s*0.06, s*0.38);
+                    ctx.fillRect(s*0.24, -s*0.38, s*0.06, s*0.38);
+                    // LED Lights
+                    ctx.fillStyle = '#2dd4bf';
+                    ctx.beginPath();
+                    ctx.arc(-s*0.2, s*0.15, s*0.03, 0, Math.PI*2);
+                    ctx.arc(0, s*0.15, s*0.03, 0, Math.PI*2);
+                    ctx.arc(s*0.2, s*0.15, s*0.03, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+
+                case 'nic': // Network Card
+                    // PCB
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.fillRect(-s*0.38, -s*0.25, s*0.76, s*0.5);
+                    // Metal Bracket
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.fillRect(-s*0.44, -s*0.4, s*0.08, s*0.8);
+                    // RJ45 Port
+                    ctx.fillStyle = '#6366f1';
+                    ctx.fillRect(-s*0.36, -s*0.1, s*0.18, s*0.2);
+                    break;
+
+                case 'flashdrive': // USB Flash Drive
+                    // Metal USB Plug
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.fillRect(-s*0.12, -s*0.4, s*0.24, s*0.2);
+                    // Body
+                    ctx.fillStyle = '#eab308';
+                    ctx.fillRect(-s*0.2, -s*0.2, s*0.4, s*0.55);
+                    ctx.fillStyle = '#854d0e';
+                    ctx.fillRect(-s*0.12, -s*0.1, s*0.24, s*0.15);
+                    break;
+
+                case 'soundcard': // Sound Card
+                    ctx.fillStyle = '#431407';
+                    ctx.fillRect(-s*0.38, -s*0.25, s*0.76, s*0.5);
+                    // Audio Jacks (Green, Pink, Blue)
+                    const colors = ['#22c55e', '#ec4899', '#3b82f6'];
+                    colors.forEach((col, i) => {
+                        ctx.fillStyle = col;
+                        ctx.beginPath();
+                        ctx.arc(-s*0.25 + i*s*0.22, -s*0.05, s*0.08, 0, Math.PI*2);
+                        ctx.fill();
+                    });
+                    break;
+
+                case 'optical': // Optical Drive
+                    // Silver Casing
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(-s*0.42, -s*0.35, s*0.84, s*0.7);
+                    // Disc Tray Slot
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(-s*0.35, -s*0.08, s*0.7, s*0.16);
+                    // Eject Button & LED
+                    ctx.fillStyle = '#22c55e';
+                    ctx.beginPath();
+                    ctx.arc(-s*0.2, s*0.18, s*0.03, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.fillRect(s*0.15, s*0.14, s*0.12, s*0.08);
+                    break;
+            }
+
+            ctx.restore();
+        }
+
+        /* ==========================================================================
+           2. AUDIO SYNTHESIZER (WEB AUDIO API)
+           ========================================================================== */
+        let audioCtx = null;
+        let isMuted = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleAudio() {
+            isMuted = !isMuted;
+            document.getElementById('icon-audio').className = isMuted ? "fa-solid fa-volume-xmark text-slate-500" : "fa-solid fa-volume-high text-cyan-300";
+        }
+
+        function playSound(type) {
+            if (isMuted) return;
+            initAudio();
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            switch(type) {
+                case 'click':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(450, now);
+                    osc.frequency.exponentialRampToValueAtTime(900, now + 0.04);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+                    osc.start(now); osc.stop(now + 0.04);
+                    break;
+
+                case 'match':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.07); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.14); // G5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+                    osc.start(now); osc.stop(now + 0.28);
+                    break;
+
+                case 'combo':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+                    osc.start(now); osc.stop(now + 0.18);
+                    break;
+
+                case 'invalid':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(150, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now); osc.stop(now + 0.2);
+                    break;
+
+                case 'hint':
+                case 'shuffle':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(350, now);
+                    osc.frequency.linearRampToValueAtTime(700, now + 0.2);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now); osc.stop(now + 0.2);
+                    break;
+
+                case 'win':
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const oscV = audioCtx.createOscillator();
+                        const gainV = audioCtx.createGain();
+                        oscV.connect(gainV);
+                        gainV.connect(audioCtx.destination);
+                        oscV.type = 'triangle';
+                        oscV.frequency.setValueAtTime(freq, now + idx * 0.09);
+                        gainV.gain.setValueAtTime(0.2, now + idx * 0.09);
+                        gainV.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.09 + 0.25);
+                        oscV.start(now + idx * 0.09);
+                        oscV.stop(now + idx * 0.09 + 0.25);
+                    });
+                    break;
+            }
+        }
+
+        /* ==========================================================================
+           3. GAME ENGINE & ONET PATHFINDING LOGIC
+           ========================================================================== */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Config Grid Dimensions (Playable 6x12 embedded in 8x14 for outer path routing)
+        const PLAY_ROWS = 6;
+        const PLAY_COLS = 12;
+        const GRID_ROWS = PLAY_ROWS + 2; // 8
+        const GRID_COLS = PLAY_COLS + 2; // 14
+        let tileSize = 48;
+
+        let grid = []; // 2D Array [row][col] -> null or Hardware Object
+        let selectedTile = null; // {r, c}
+        let hintPair = null; // [{r,c}, {r,c}]
+        let activeLinePath = null; // Array of points [{r,c}] for match line render
+        let lineAlpha = 0;
+        let particles = [];
+
+        // Game State
+        let gameState = {
+            level: 1,
+            score: 0,
+            combo: 1,
+            lastMatchTime: 0,
+            hints: 3,
+            shuffles: 3,
+            timeLeft: 100, // percentage 0-100
+            maxTime: 120, // seconds
+            timerInterval: null,
+            isPaused: false,
+            isPlaying: false,
+            remainingPairs: 0
+        };
+
+        const LEVEL_CONFIGS = [
+            { desc: 'Standard Static Circuit', shiftDir: 'none' },
+            { desc: 'Gravity: Shift Down', shiftDir: 'down' },
+            { desc: 'Gravity: Shift Left', shiftDir: 'left' },
+            { desc: 'Gravity: Shift Up', shiftDir: 'up' },
+            { desc: 'Gravity: Shift Right', shiftDir: 'right' }
+        ];
+
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-wrapper');
+            const maxW = Math.min(window.innerWidth - 32, 860);
+            
+            tileSize = Math.floor(maxW / GRID_COLS);
+            tileSize = Math.max(28, Math.min(tileSize, 56));
+
+            canvas.width = GRID_COLS * tileSize;
+            canvas.height = GRID_ROWS * tileSize;
+            
+            renderBoard();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        /* ==========================================================================
+           4. PATHFINDING: MAXIMUM 2 TURNS (3 LINE SEGMENTS)
+           ========================================================================== */
+        function isLineClear(r1, c1, r2, c2) {
+            if (r1 !== r2 && c1 !== c2) return false;
+
+            if (r1 === r2) {
+                const minC = Math.min(c1, c2);
+                const maxC = Math.max(c1, c2);
+                for (let c = minC + 1; c < maxC; c++) {
+                    if (grid[r1][c] !== null) return false;
+                }
+            } else {
+                const minR = Math.min(r1, r2);
+                const maxR = Math.max(r1, r2);
+                for (let r = minR + 1; r < maxR; r++) {
+                    if (grid[r][c1] !== null) return false;
+                }
+            }
+            return true;
+        }
+
+        function findPath(r1, c1, r2, c2) {
+            if (r1 === r2 && c1 === c2) return null;
+            if (!grid[r1][c1] || !grid[r2][c2]) return null;
+            if (grid[r1][c1].id !== grid[r2][c2].id) return null;
+
+            // 1. Direct Straight Line (0 Turns)
+            if (isLineClear(r1, c1, r2, c2)) {
+                return [{ r: r1, c: c1 }, { r: r2, c: c2 }];
+            }
+
+            // 2. One Turn (1 Corner Point)
+            if (grid[r1][c2] === null && isLineClear(r1, c1, r1, c2) && isLineClear(r1, c2, r2, c2)) {
+                return [{ r: r1, c: c1 }, { r: r1, c: c2 }, { r: r2, c: c2 }];
+            }
+            if (grid[r2][c1] === null && isLineClear(r1, c1, r2, c1) && isLineClear(r2, c1, r2, c2)) {
+                return [{ r: r1, c: c1 }, { r: r2, c: c1 }, { r: r2, c: c2 }];
+            }
+
+            // 3. Two Turns (2 Corner Points) - Horizontal & Vertical Scan
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (c === c1 || c === c2) continue;
+                if (grid[r1][c] === null && grid[r2][c] === null) {
+                    if (isLineClear(r1, c1, r1, c) && isLineClear(r1, c, r2, c) && isLineClear(r2, c, r2, c2)) {
+                        return [{ r: r1, c: c1 }, { r: r1, c: c }, { r: r2, c: c }, { r: r2, c: c2 }];
+                    }
+                }
+            }
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                if (r === r1 || r === r2) continue;
+                if (grid[r][c1] === null && grid[r][c2] === null) {
+                    if (isLineClear(r1, c1, r, c1) && isLineClear(r, c1, r, c2) && isLineClear(r, c2, r2, c2)) {
+                        return [{ r: r1, c: c1 }, { r: r, c: c1 }, { r: r, c: c2 }, { r: r2, c: c2 }];
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /* ==========================================================================
+           5. BOARD GENERATION & SHIFT MECHANICS
+           ========================================================================== */
+        function initGrid() {
+            grid = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(null));
+
+            const totalTiles = PLAY_ROWS * PLAY_COLS; // 72 tiles = 36 pairs
+            const numUniqueTypes = Math.min(10 + gameState.level, HARDWARE_TYPES.length);
+            
+            let pool = [];
+            for (let i = 0; i < totalTiles / 2; i++) {
+                const hw = HARDWARE_TYPES[i % numUniqueTypes];
+                pool.push(hw, hw);
+            }
+
+            pool.sort(() => Math.random() - 0.5);
+
+            let idx = 0;
+            for (let r = 1; r <= PLAY_ROWS; r++) {
+                for (let c = 1; c <= PLAY_COLS; c++) {
+                    grid[r][c] = pool[idx++];
+                }
+            }
+
+            gameState.remainingPairs = totalTiles / 2;
+            
+            if (!hasValidMoves()) {
+                shuffleBoard(false);
+            }
+        }
+
+        function hasValidMoves() {
+            let tiles = [];
+            for (let r = 1; r <= PLAY_ROWS; r++) {
+                for (let c = 1; c <= PLAY_COLS; c++) {
+                    if (grid[r][c] !== null) {
+                        tiles.push({ r, c, hw: grid[r][c] });
+                    }
+                }
+            }
+
+            for (let i = 0; i < tiles.length; i++) {
+                for (let j = i + 1; j < tiles.length; j++) {
+                    if (tiles[i].hw.id === tiles[j].hw.id) {
+                        if (findPath(tiles[i].r, tiles[i].c, tiles[j].r, tiles[j].c)) {
+                            return [{ r: tiles[i].r, c: tiles[i].c }, { r: tiles[j].r, c: tiles[j].c }];
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function applyGravity() {
+            const shiftDir = LEVEL_CONFIGS[(gameState.level - 1) % LEVEL_CONFIGS.length].shiftDir;
+            if (shiftDir === 'none') return;
+
+            if (shiftDir === 'down') {
+                for (let c = 1; c <= PLAY_COLS; c++) {
+                    let colTiles = [];
+                    for (let r = 1; r <= PLAY_ROWS; r++) {
+                        if (grid[r][c] !== null) colTiles.push(grid[r][c]);
+                    }
+                    for (let r = PLAY_ROWS; r >= 1; r--) {
+                        grid[r][c] = colTiles.pop() || null;
+                    }
+                }
+            } else if (shiftDir === 'up') {
+                for (let c = 1; c <= PLAY_COLS; c++) {
+                    let colTiles = [];
+                    for (let r = 1; r <= PLAY_ROWS; r++) {
+                        if (grid[r][c] !== null) colTiles.push(grid[r][c]);
+                    }
+                    for (let r = 1; r <= PLAY_ROWS; r++) {
+                        grid[r][c] = colTiles.shift() || null;
+                    }
+                }
+            } else if (shiftDir === 'left') {
+                for (let r = 1; r <= PLAY_ROWS; r++) {
+                    let rowTiles = [];
+                    for (let c = 1; c <= PLAY_COLS; c++) {
+                        if (grid[r][c] !== null) rowTiles.push(grid[r][c]);
+                    }
+                    for (let c = 1; c <= PLAY_COLS; c++) {
+                        grid[r][c] = rowTiles.shift() || null;
+                    }
+                }
+            } else if (shiftDir === 'right') {
+                for (let r = 1; r <= PLAY_ROWS; r++) {
+                    let rowTiles = [];
+                    for (let c = 1; c <= PLAY_COLS; c++) {
+                        if (grid[r][c] !== null) rowTiles.push(grid[r][c]);
+                    }
+                    for (let c = PLAY_COLS; c >= 1; c--) {
+                        grid[r][c] = rowTiles.pop() || null;
+                    }
+                }
+            }
+        }
+
+        function shuffleBoard(playSoundEffect = true) {
+            let activeTiles = [];
+            for (let r = 1; r <= PLAY_ROWS; r++) {
+                for (let c = 1; c <= PLAY_COLS; c++) {
+                    if (grid[r][c] !== null) {
+                        activeTiles.push(grid[r][c]);
+                    }
+                }
+            }
+
+            if (activeTiles.length === 0) return;
+
+            let attempts = 0;
+            do {
+                activeTiles.sort(() => Math.random() - 0.5);
+                let idx = 0;
+                for (let r = 1; r <= PLAY_ROWS; r++) {
+                    for (let c = 1; c <= PLAY_COLS; c++) {
+                        if (grid[r][c] !== null) {
+                            grid[r][c] = activeTiles[idx++];
+                        }
+                    }
+                }
+                attempts++;
+            } while (!hasValidMoves() && attempts < 50);
+
+            if (playSoundEffect) playSound('shuffle');
+            selectedTile = null;
+            hintPair = null;
+            renderBoard();
+        }
+
+        /* ==========================================================================
+           6. RENDER & VISUAL EFFECTS
+           ========================================================================== */
+        function renderBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Grid Tiles
+            for (let r = 1; r <= PLAY_ROWS; r++) {
+                for (let c = 1; c <= PLAY_COLS; c++) {
+                    const item = grid[r][c];
+                    if (item === null) continue;
+
+                    const x = c * tileSize;
+                    const y = r * tileSize;
+                    const padding = 3;
+
+                    ctx.save();
+                    const isSelected = selectedTile && selectedTile.r === r && selectedTile.c === c;
+                    const isHint = hintPair && hintPair.some(p => p.r === r && p.c === c);
+
+                    if (isSelected) {
+                        ctx.fillStyle = '#0284c7'; // Active Blue Highlight
+                        ctx.shadowColor = '#38bdf8';
+                        ctx.shadowBlur = 12;
+                    } else if (isHint) {
+                        ctx.fillStyle = '#4f46e5'; // Hint Indigo
+                        ctx.shadowColor = '#818cf8';
+                        ctx.shadowBlur = 12;
+                    } else {
+                        ctx.fillStyle = item.bg;
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                        ctx.shadowBlur = 6;
+                        ctx.shadowOffsetY = 3;
+                    }
+
+                    // Rounded Rect Tile
+                    drawRoundedRect(ctx, x + padding, y + padding, tileSize - padding*2, tileSize - padding*2, 8);
+                    ctx.fill();
+
+                    ctx.shadowColor = 'transparent';
+                    ctx.strokeStyle = isSelected ? '#38bdf8' : (isHint ? '#a5b4fc' : 'rgba(56, 189, 248, 0.25)');
+                    ctx.lineWidth = isSelected || isHint ? 2.5 : 1.2;
+                    ctx.stroke();
+
+                    // Draw Hardware Component Icon
+                    drawHardwareIcon(ctx, item, x, y, tileSize);
+                    ctx.restore();
+                }
+            }
+
+            // 2. Draw Active Path Connection Line (Glowing Laser Circuit Line)
+            if (activeLinePath && lineAlpha > 0) {
+                ctx.save();
+                ctx.strokeStyle = `rgba(56, 189, 248, ${lineAlpha})`;
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.shadowColor = '#0EA5E9';
+                ctx.shadowBlur = 15;
+
+                ctx.beginPath();
+                activeLinePath.forEach((pt, i) => {
+                    const px = pt.c * tileSize + tileSize / 2;
+                    const py = pt.r * tileSize + tileSize / 2;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                });
+                ctx.stroke();
+
+                // Draw Nodes at corners
+                ctx.fillStyle = '#ffffff';
+                activeLinePath.forEach((pt) => {
+                    const px = pt.c * tileSize + tileSize / 2;
+                    const py = pt.r * tileSize + tileSize / 2;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.restore();
+            }
+
+            // 3. Render Particles
+            updateAndDrawParticles();
+        }
+
+        function drawRoundedRect(ctx, x, y, w, h, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.arcTo(x + w, y, x + w, y + h, radius);
+            ctx.arcTo(x + w, y + h, x, y + h, radius);
+            ctx.arcTo(x, y + h, x, y, radius);
+            ctx.arcTo(x, y, x + w, y, radius);
+            ctx.closePath();
+        }
+
+        function spawnParticles(r1, c1, r2, c2) {
+            const points = [
+                { x: c1 * tileSize + tileSize / 2, y: r1 * tileSize + tileSize / 2 },
+                { x: c2 * tileSize + tileSize / 2, y: r2 * tileSize + tileSize / 2 }
+            ];
+
+            points.forEach(pt => {
+                for (let i = 0; i < 16; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 4 + 1.5;
+                    particles.push({
+                        x: pt.x,
+                        y: pt.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        radius: Math.random() * 3 + 2,
+                        color: ['#38bdf8', '#3b82f6', '#818cf8', '#f59e0b'][Math.floor(Math.random() * 4)],
+                        alpha: 1
+                    });
+                }
+            });
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.035;
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        /* ==========================================================================
+           7. INTERACTION & INPUT HANDLING
+           ========================================================================== */
+        canvas.addEventListener('click', (e) => {
+            if (!gameState.isPlaying || gameState.isPaused) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            const c = Math.floor(clickX / tileSize);
+            const r = Math.floor(clickY / tileSize);
+
+            if (r < 1 || r > PLAY_ROWS || c < 1 || c > PLAY_COLS || grid[r][c] === null) {
+                selectedTile = null;
+                renderBoard();
+                return;
+            }
+
+            playSound('click');
+
+            if (!selectedTile) {
+                selectedTile = { r, c };
+                hintPair = null;
+            } else if (selectedTile.r === r && selectedTile.c === c) {
+                selectedTile = null;
+            } else {
+                const path = findPath(selectedTile.r, selectedTile.c, r, c);
+
+                if (path) {
+                    // VALID MATCH!
+                    const r1 = selectedTile.r, c1 = selectedTile.c;
+                    
+                    // Combo logic (within 3 seconds)
+                    const now = Date.now();
+                    if (now - gameState.lastMatchTime < 3000) {
+                        gameState.combo = Math.min(5, gameState.combo + 1);
+                        playSound('combo');
+                    } else {
+                        gameState.combo = 1;
+                        playSound('match');
+                    }
+                    gameState.lastMatchTime = now;
+
+                    spawnParticles(r1, c1, r, c);
+
+                    activeLinePath = path;
+                    lineAlpha = 1;
+
+                    grid[r1][c1] = null;
+                    grid[r][c] = null;
+
+                    gameState.remainingPairs--;
+                    gameState.score += (100 * gameState.combo) + Math.floor(gameState.timeLeft);
+                    gameState.timeLeft = Math.min(100, gameState.timeLeft + 4);
+                    updateHUD();
+
+                    selectedTile = null;
+                    hintPair = null;
+
+                    setTimeout(() => {
+                        activeLinePath = null;
+                        applyGravity();
+
+                        if (gameState.remainingPairs > 0 && !hasValidMoves()) {
+                            setTimeout(() => shuffleBoard(true), 300);
+                        }
+
+                        if (gameState.remainingPairs <= 0) {
+                            handleLevelWin();
+                        }
+                        renderBoard();
+                    }, 220);
+
+                } else {
+                    // INVALID MATCH
+                    playSound('invalid');
+                    gameState.combo = 1;
+                    updateHUD();
+                    selectedTile = { r, c };
+                }
+            }
+
+            renderBoard();
+        });
+
+        /* ==========================================================================
+           8. POWER-UPS & GAME CONTROL FLOW
+           ========================================================================== */
+        function useHint() {
+            if (!gameState.isPlaying || gameState.isPaused || gameState.hints <= 0) return;
+
+            const validPair = hasValidMoves();
+            if (validPair) {
+                gameState.hints--;
+                hintPair = validPair;
+                playSound('hint');
+                updateHUD();
+                renderBoard();
+            }
+        }
+
+        function useShuffle() {
+            if (!gameState.isPlaying || gameState.isPaused || gameState.shuffles <= 0) return;
+            gameState.shuffles--;
+            updateHUD();
+            shuffleBoard(true);
+        }
+
+        function toggleHelpModal() {
+            const modal = document.getElementById('help-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function startGame() {
+            initAudio();
+            gameState.level = 1;
+            gameState.score = 0;
+            gameState.combo = 1;
+            gameState.hints = 3;
+            gameState.shuffles = 3;
+            startLevel();
+        }
+
+        function startLevel() {
+            gameState.isPlaying = true;
+            gameState.isPaused = false;
+            gameState.timeLeft = 100;
+
+            document.getElementById('start-overlay').classList.add('hidden');
+            document.getElementById('end-overlay').classList.add('hidden');
+            document.getElementById('pause-overlay').classList.add('hidden');
+            document.getElementById('help-modal').classList.add('hidden');
+
+            initGrid();
+            updateHUD();
+            resizeCanvas();
+
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            gameState.timerInterval = setInterval(() => {
+                if (gameState.isPlaying && !gameState.isPaused) {
+                    gameState.timeLeft -= (100 / gameState.maxTime);
+                    updateTimerBar();
+
+                    if (gameState.timeLeft <= 0) {
+                        handleGameOver();
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateHUD() {
+            document.getElementById('score-text').innerText = gameState.score;
+            document.getElementById('combo-text').innerText = `x${gameState.combo}`;
+            document.getElementById('pairs-text').innerText = gameState.remainingPairs;
+            document.getElementById('hint-count').innerText = gameState.hints;
+            document.getElementById('shuffle-count').innerText = gameState.shuffles;
+            document.getElementById('level-badge').innerText = `Stage ${String(gameState.level).padStart(2, '0')}`;
+
+            const cfg = LEVEL_CONFIGS[(gameState.level - 1) % LEVEL_CONFIGS.length];
+            document.getElementById('level-desc').innerText = cfg.desc;
+
+            updateTimerBar();
+        }
+
+        function updateTimerBar() {
+            const bar = document.getElementById('timer-bar');
+            bar.style.width = `${Math.max(0, gameState.timeLeft)}%`;
+        }
+
+        function togglePause() {
+            if (!gameState.isPlaying) return;
+            gameState.isPaused = !gameState.isPaused;
+            const pauseOverlay = document.getElementById('pause-overlay');
+            if (gameState.isPaused) {
+                pauseOverlay.classList.remove('hidden');
+            } else {
+                pauseOverlay.classList.add('hidden');
+            }
+        }
+
+        function handleLevelWin() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timerInterval);
+            playSound('win');
+
+            const overlay = document.getElementById('end-overlay');
+            document.getElementById('end-icon').innerHTML = `<i class="fa-solid fa-microchip text-cyan-400"></i>`;
+            document.getElementById('end-title').innerText = "STAGE CLEARED!";
+            document.getElementById('end-title').className = "text-3xl font-black mb-2 text-cyan-400 tech-font";
+            document.getElementById('end-subtitle').innerText = "Circuit fully linked! System operating at peak performance.";
+            document.getElementById('end-score').innerText = gameState.score;
+            document.getElementById('end-level').innerText = gameState.level;
+
+            const actionBtn = document.getElementById('end-action-btn');
+            actionBtn.innerText = "NEXT STAGE";
+            actionBtn.onclick = () => {
+                gameState.level++;
+                gameState.hints++;
+                startLevel();
+            };
+
+            overlay.classList.remove('hidden');
+        }
+
+        function handleGameOver() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timerInterval);
+            playSound('invalid');
+
+            const overlay = document.getElementById('end-overlay');
+            document.getElementById('end-icon').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-500 animate-bounce"></i>`;
+            document.getElementById('end-title').innerText = "SYSTEM OVERLOAD!";
+            document.getElementById('end-title').className = "text-3xl font-black mb-2 text-rose-500 tech-font";
+            document.getElementById('end-subtitle').innerText = "Time expired before all components were connected.";
+            document.getElementById('end-score').innerText = gameState.score;
+            document.getElementById('end-level').innerText = gameState.level;
+
+            const actionBtn = document.getElementById('end-action-btn');
+            actionBtn.innerText = "TRY AGAIN";
+            actionBtn.onclick = startGame;
+
+            overlay.classList.remove('hidden');
+        }
+
+        function nextLevelOrRestart() {
+            // Handled by dynamic button onclick
+        }
+
+        // Continuous Animation Loop
+        function animationLoop() {
+            if (particles.length > 0 || activeLinePath) {
+                renderBoard();
+            }
+            requestAnimationFrame(animationLoop);
+        }
+
+        window.onload = () => {
+            resizeCanvas();
+            requestAnimationFrame(animationLoop);
+        };
+    </script>
+</body>
+</html>
