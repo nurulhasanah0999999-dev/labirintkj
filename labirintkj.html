@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Labirin Quest - Dasar-Dasar TKJ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome untuk Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Press Start 2P -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', monospace;
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center overflow-x-hidden p-2 md:p-4">
+
+    <!-- HEADER / GAME TITLE & AUDIO CONTROLS -->
+    <header class="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-3 md:p-4 shadow-xl mb-2 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-xl">
+                <i class="fa-solid fa-gamepad"></i>
+            </div>
+            <div>
+                <h1 class="text-base md:text-xl font-black text-amber-400 tracking-wide font-pixel">LABIRIN QUEST</h1>
+                <p class="text-xs text-slate-400">Dasar-Dasar Teknik Komputer & Jaringan</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button id="btn-audio" onclick="toggleAudio()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
+                <i id="icon-audio" class="fa-solid fa-volume-xmark"></i>
+                <span id="text-audio" class="hidden sm:inline">Mute Audio</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- QUESTION & HUD STATUS BAR -->
+    <div id="game-ui-container" class="w-full max-w-4xl space-y-2 hidden">
+        <!-- HUD BAR -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center text-xs md:text-sm font-bold">
+            <div class="flex items-center space-x-2">
+                <span class="text-slate-400">Nyawa:</span>
+                <div id="lives-display" class="flex text-rose-500 space-x-1 text-base">
+                    <i class="fa-solid fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 px-3 py-1 rounded-lg border border-slate-700 text-amber-400 font-pixel text-xs" id="level-badge">
+                SOAL 1/6
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <span class="text-slate-400">Skor:</span>
+                <span id="score-display" class="text-emerald-400 font-mono text-base">0</span>
+            </div>
+        </div>
+
+        <!-- QUESTION BANNER -->
+        <div class="bg-slate-900/90 border-2 border-amber-500/40 rounded-xl p-3 md:p-4 text-center shadow-lg relative">
+            <span id="question-category" class="bg-amber-500/20 text-amber-300 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-amber-500/30 mb-1 inline-block">Topik TKJ</span>
+            <h2 id="question-text" class="text-sm md:text-base font-bold text-slate-100 leading-snug">
+                Memuat soal labirin...
+            </h2>
+        </div>
+    </div>
+
+    <!-- MAIN GAME DISPLAY (CANVAS & OVERLAYS) -->
+    <main class="w-full max-w-4xl relative flex flex-col items-center justify-center my-2">
+
+        <!-- CANVAS GAMEFIELD -->
+        <div class="relative w-full bg-slate-900 border-2 border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex justify-center items-center">
+            <canvas id="gameCanvas" width="800" height="600" class="w-full h-auto max-h-[70vh] block bg-slate-950"></canvas>
+
+            <!-- START SCREEN OVERLAY -->
+            <div id="start-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col justify-center items-center p-6 text-center z-20">
+                <div class="w-16 h-16 bg-amber-500/20 border border-amber-500/40 rounded-2xl flex items-center justify-center text-amber-400 text-3xl mb-4 animate-bounce">
+                    <i class="fa-solid fa-maze"></i>
+                </div>
+                <h2 class="text-xl md:text-2xl font-black font-pixel text-amber-400 mb-2">LABIRIN QUEST TKJ</h2>
+                <p class="text-xs md:text-sm text-slate-300 max-w-md mb-6 leading-relaxed">
+                    Arahkan Karakter <span class="text-amber-400 font-bold">(Hero)</span> ke zona ruangan opsi jawaban (A, B, C, atau D) yang benar sambil menghindari <span class="text-rose-400 font-bold">Monster</span>!
+                </p>
+
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl text-left text-xs text-slate-300 max-w-sm mb-6 space-y-2">
+                    <p class="font-bold text-amber-300 border-b border-slate-800 pb-1"><i class="fa-solid fa-compass mr-1"></i> Cara Bermain:</p>
+                    <p>• Gunakan <b class="text-white">Tombol Panah / WASD</b> atau <b class="text-white">D-Pad Virtual</b> di bawah layar.</p>
+                    <p>• Masuki zona jawaban pilihanmu.</p>
+                    <p>• <b class="text-emerald-400">Jawaban Benar:</b> Zona terkunci aman dari monster & lanjut ke soal berikutnya.</p>
+                    <p>• <b class="text-rose-400">Jawaban Salah:</b> Area meledak (bom) & kamu harus cari jawaban lain!</p>
+                </div>
+
+                <button onclick="startGame()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold py-3.5 px-8 rounded-xl font-pixel text-xs shadow-lg hover:shadow-amber-500/20 active:scale-95 transition">
+                    MULAI PETUALANGAN <i class="fa-solid fa-play ml-2"></i>
+                </button>
+            </div>
+
+            <!-- EXPLANATION MODAL (BENAR) -->
+            <div id="explanation-modal" class="absolute inset-x-4 bottom-4 bg-emerald-950/95 border-2 border-emerald-500 rounded-xl p-4 text-emerald-100 shadow-2xl backdrop-blur hidden z-30 animate-fade-in">
+                <div class="flex items-center justify-between border-b border-emerald-800/80 pb-2 mb-2">
+                    <span class="font-bold text-emerald-300 text-sm flex items-center">
+                        <i class="fa-solid fa-circle-check text-emerald-400 mr-2 text-lg"></i> Jawaban Tepat! Area Dikunci Aman!
+                    </span>
+                    <span class="text-xs bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded font-mono">+100 Poin</span>
+                </div>
+                <p id="explanation-text" class="text-xs md:text-sm text-emerald-200/90 leading-relaxed mb-3">
+                    Penjelasan materi TKJ akan muncul di sini...
+                </p>
+                <button onclick="nextQuestion()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs shadow float-right transition flex items-center">
+                    Soal Berikutnya <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+
+            <!-- GAMEOVER / VICTORY OVERLAY -->
+            <div id="end-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur flex flex-col justify-center items-center p-6 text-center z-40 hidden">
+                <div id="end-icon" class="text-5xl mb-3"></div>
+                <h2 id="end-title" class="text-2xl font-black font-pixel mb-2"></h2>
+                <p id="end-subtitle" class="text-xs md:text-sm text-slate-300 max-w-md mb-6"></p>
+
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl text-sm space-y-2 mb-6 w-full max-w-xs">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Total Skor:</span>
+                        <span id="end-score" class="font-mono font-bold text-amber-400">0</span>
+                    </div>
+                    <div class="flex justify-between border-t border-slate-800 pt-2">
+                        <span class="text-slate-400">Soal Terselesaikan:</span>
+                        <span id="end-questions" class="font-mono font-bold text-emerald-400">0/6</span>
+                    </div>
+                </div>
+
+                <button onclick="startGame()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-3.5 px-8 rounded-xl font-pixel text-xs shadow-lg transition">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> MAIN LAGI
+                </button>
+            </div>
+        </div>
+
+        <!-- MOBILE VIRTUAL CONTROLLER (D-PAD) -->
+        <div id="mobile-dpad" class="w-full max-w-xs mt-3 flex flex-col items-center gap-1 md:hidden">
+            <button ontouchstart="handleDpad('up', true)" ontouchend="handleDpad('up', false)" mousedown="handleDpad('up', true)" mouseup="handleDpad('up', false)"
+                class="w-14 h-12 bg-slate-800 active:bg-amber-500 active:text-slate-950 border border-slate-700 rounded-lg text-slate-200 text-xl font-bold flex items-center justify-center shadow">
+                <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <div class="flex gap-10">
+                <button ontouchstart="handleDpad('left', true)" ontouchend="handleDpad('left', false)" mousedown="handleDpad('left', true)" mouseup="handleDpad('left', false)"
+                    class="w-14 h-12 bg-slate-800 active:bg-amber-500 active:text-slate-950 border border-slate-700 rounded-lg text-slate-200 text-xl font-bold flex items-center justify-center shadow">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button ontouchstart="handleDpad('right', true)" ontouchend="handleDpad('right', false)" mousedown="handleDpad('right', true)" mouseup="handleDpad('right', false)"
+                    class="w-14 h-12 bg-slate-800 active:bg-amber-500 active:text-slate-950 border border-slate-700 rounded-lg text-slate-200 text-xl font-bold flex items-center justify-center shadow">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+            <button ontouchstart="handleDpad('down', true)" ontouchend="handleDpad('down', false)" mousedown="handleDpad('down', true)" mouseup="handleDpad('down', false)"
+                class="w-14 h-12 bg-slate-800 active:bg-amber-500 active:text-slate-950 border border-slate-700 rounded-lg text-slate-200 text-xl font-bold flex items-center justify-center shadow">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="text-xs text-slate-500 py-2 text-center border-t border-slate-900 w-full max-w-4xl mt-2">
+        Game Pembelajaran Media Interaktif Dasar TKJ &copy; 2026
+    </footer>
+
+    <!-- JAVASCRIPT GAME LOGIC -->
+    <script>
+        /* ==========================================================================
+           1. QUESTION BANK (DASAR TKJ)
+           ========================================================================== */
+        const quizBank = [
+            {
+                topic: "Alamat IP & Jaringan",
+                question: "Manakah di bawah ini yang merupakan contoh penulisan IPv4 Address yang valid?",
+                options: [
+                    { letter: "A", text: "192.168.1.256" },
+                    { letter: "B", text: "192.168.1.1", correct: true },
+                    { letter: "C", text: "300.200.100.1" },
+                    { letter: "D", text: "192.168.1" }
+                ],
+                explanation: "Alamat IPv4 terdiri dari 4 oktet (0-255) yang dipisahkan titik. Nilai 256 atau 300 tidak valid karena melebihi batas 255."
+            },
+            {
+                topic: "Hardware Komputer",
+                question: "Komponen hardware yang berfungsi sebagai tempat penyimpanan data sementara saat komputer beroperasi adalah...",
+                options: [
+                    { letter: "A", text: "Harddisk Drive (HDD)" },
+                    { letter: "B", text: "Power Supply (PSU)" },
+                    { letter: "C", text: "RAM (Random Access Memory)", correct: true },
+                    { letter: "D", text: "Processor (CPU)" }
+                ],
+                explanation: "RAM menyimpan data sementara yang sedang diproses oleh CPU. Sifat RAM adalah volatile (hilang saat listrik mati)."
+            },
+            {
+                topic: "Perangkat Jaringan",
+                question: "Perangkat jaringan cerdas yang menghubungkan beberapa jaringan berbeda dan mengarahkan rute paket data (routing) adalah...",
+                options: [
+                    { letter: "A", text: "Switch Unmanaged" },
+                    { letter: "B", text: "Router", correct: true },
+                    { letter: "C", text: "Hub" },
+                    { letter: "D", text: "Kabel UTP" }
+                ],
+                explanation: "Router bekerja pada Layer 3 (Network) untuk mengarahkan rute lalu lintas antar jaringan yang berbedasegmen/IP."
+            },
+            {
+                topic: "Kabel & Pengabelan",
+                question: "Konektor standar yang digunakan pada ujung kabel LAN UTP untuk dihubungkan ke Port Ethernet RJ-45 adalah...",
+                options: [
+                    { letter: "A", text: "Konektor RJ-11" },
+                    { letter: "B", text: "Konektor BNC" },
+                    { letter: "C", text: "Konektor RJ-45", correct: true },
+                    { letter: "D", text: "Konektor USB-C" }
+                ],
+                explanation: "Konektor RJ-45 adalah standar konektor modular 8-pin yang digunakan untuk pengabelan jaringan Ethernet UTP/STP."
+            },
+            {
+                topic: "Command Line (CLI)",
+                question: "Perintah CMD pada Windows yang digunakan untuk mengecek konektivitas/keterhubungan antar komputer adalah...",
+                options: [
+                    { letter: "A", text: "ipconfig" },
+                    { letter: "B", text: "ping", correct: true },
+                    { letter: "C", text: "cls" },
+                    { letter: "D", text: "dir" }
+                ],
+                explanation: "Perintah 'ping' mengirimkan paket ICMP Echo Request ke IP tujuan untuk menguji apakah perangkat terhubung."
+            },
+            {
+                topic: "Model OSI Layer",
+                question: "Layer teratas pada Model Referensi OSI 7-Layer yang berinteraksi langsung dengan aplikasi pengguna adalah...",
+                options: [
+                    { letter: "A", text: "Physical Layer" },
+                    { letter: "B", text: "Network Layer" },
+                    { letter: "C", text: "Transport Layer" },
+                    { letter: "D", text: "Application Layer", correct: true },
+                    { letter: "E", text: "Application Layer" } // Safe fallback fallback
+                ],
+                explanation: "Application Layer (Layer 7) menyediakan antarmuka bagi aplikasi pengguna untuk mengakses layanan jaringan (contoh: HTTP, FTP, SMTP)."
+            }
+        ];
+
+        /* ==========================================================================
+           2. MAP & MAZE GRID STRUCTURE (20x15 Cells)
+           ========================================================================== */
+        const GRID_COLS = 20;
+        const GRID_ROWS = 15;
+        const CELL_SIZE = 40; // 20 * 40 = 800px width, 15 * 40 = 600px height
+
+        // 0: Path/Lantai, 1: Dinding, 2: Gate Area
+        // Area Opsi Jawaban:
+        // A: Kiri Atas (Cols 1..4, Rows 1..3)
+        // B: Kanan Atas (Cols 15..18, Rows 1..3)
+        // C: Kiri Bawah (Cols 1..4, Rows 11..13)
+        // D: Kanan Bawah (Cols 15..18, Rows 11..13)
+        const baseMap = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1],
+            [1,0,0,0,2,0,1,1,0,0,0,0,1,1,0,2,0,0,0,1],
+            [1,0,0,0,1,0,1,0,0,1,1,0,0,1,0,1,0,0,0,1],
+            [1,1,2,1,1,0,1,0,1,1,1,1,0,1,0,1,1,2,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1], // Center player spawn (9,7)
+            [1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,2,1,1,0,1,0,1,1,1,1,0,1,0,1,1,2,1,1],
+            [1,0,0,0,1,0,1,0,0,1,1,0,0,1,0,1,0,0,0,1],
+            [1,0,0,0,2,0,1,1,0,0,0,0,1,1,0,2,0,0,0,1],
+            [1,0,0,0,1,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // Definisi Koordinat Ruangan Jawaban
+        const zones = {
+            'A': { id: 'A', colMin: 1, colMax: 3, rowMin: 1, rowMax: 3, gates: [{c:4, r:2}, {c:2, r:4}], label: "OPSI A", status: 'OPEN' },
+            'B': { id: 'B', colMin: 16, colMax: 18, rowMin: 1, rowMax: 3, gates: [{c:15, r:2}, {c:17, r:4}], label: "OPSI B", status: 'OPEN' },
+            'C': { id: 'C', colMin: 1, colMax: 3, rowMin: 11, rowMax: 13, gates: [{c:4, r:12}, {c:2, r:10}], label: "OPSI C", status: 'OPEN' },
+            'D': { id: 'D', colMin: 16, colMax: 18, rowMin: 11, rowMax: 13, gates: [{c:15, r:12}, {c:17, r:10}], label: "OPSI D", status: 'OPEN' }
+        };
+
+        /* ==========================================================================
+           3. AUDIO SYNTHESIS (Chiptune BGM & SFX via Web Audio API)
+           ========================================================================== */
+        let audioCtx = null;
+        let isMuted = false;
+        let bgmInterval = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleAudio() {
+            isMuted = !isMuted;
+            const btnIcon = document.getElementById('icon-audio');
+            const btnText = document.getElementById('text-audio');
+
+            if (isMuted) {
+                btnIcon.className = "fa-solid fa-volume-xmark";
+                btnText.innerText = "Mute";
+                stopBGM();
+            } else {
+                btnIcon.className = "fa-solid fa-volume-high text-amber-400";
+                btnText.innerText = "Unmute";
+                initAudio();
+                startBGM();
+            }
+        }
+
+        function playSound(type) {
+            if (isMuted || !audioCtx) return;
+            initAudio();
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } else if (type === 'bomb') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'hit') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.setValueAtTime(120, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'victory') {
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, idx) => {
+                    const oscV = audioCtx.createOscillator();
+                    const gainV = audioCtx.createGain();
+                    oscV.connect(gainV);
+                    gainV.connect(audioCtx.destination);
+                    oscV.type = 'triangle';
+                    oscV.frequency.setValueAtTime(freq, now + idx * 0.12);
+                    gainV.gain.setValueAtTime(0.15, now + idx * 0.12);
+                    gainV.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.3);
+                    oscV.start(now + idx * 0.12);
+                    oscV.stop(now + idx * 0.12 + 0.3);
+                });
+            }
+        }
+
+        // BGM Chiptune Loop Synthesizer
+        function startBGM() {
+            if (bgmInterval || isMuted || !audioCtx) return;
+            const melody = [261.63, 293.66, 329.63, 349.23, 392.00, 329.63, 293.66, 349.23];
+            let noteIdx = 0;
+
+            bgmInterval = setInterval(() => {
+                if (isMuted || !audioCtx) return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(melody[noteIdx], now);
+                gain.gain.setValueAtTime(0.03, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+                osc.start(now);
+                osc.stop(now + 0.25);
+
+                noteIdx = (noteIdx + 1) % melody.length;
+            }, 300);
+        }
+
+        function stopBGM() {
+            if (bgmInterval) {
+                clearInterval(bgmInterval);
+                bgmInterval = null;
+            }
+        }
+
+        /* ==========================================================================
+           4. GAME STATE & ENTITIES
+           ========================================================================== */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameState = {
+            currentQuestionIdx: 0,
+            score: 0,
+            lives: 3,
+            isPlaying: false,
+            isQuestionAnswered: false,
+            particles: []
+        };
+
+        // Player Entity
+        const player = {
+            x: 9.5 * CELL_SIZE,
+            y: 7.5 * CELL_SIZE,
+            radius: 14,
+            speed: 3.2,
+            dirX: 0,
+            dirY: 0
+        };
+
+        // Input Tracking
+        const keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+
+        // Monster Entities (3 Random Wandering Monsters)
+        const monsters = [
+            { x: 5.5 * CELL_SIZE, y: 7.5 * CELL_SIZE, radius: 14, speed: 1.8, dirX: 1, dirY: 0, changeTimer: 0 },
+            { x: 14.5 * CELL_SIZE, y: 7.5 * CELL_SIZE, radius: 14, speed: 1.8, dirX: -1, dirY: 0, changeTimer: 0 },
+            { x: 9.5 * CELL_SIZE, y: 3.5 * CELL_SIZE, radius: 14, speed: 1.8, dirX: 0, dirY: 1, changeTimer: 0 }
+        ];
+
+        /* ==========================================================================
+           5. EVENT LISTENERS & CONTROLS
+           ========================================================================== */
+        window.addEventListener('keydown', (e) => {
+            if (!gameState.isPlaying) return;
+            if (['ArrowUp', 'KeyW'].includes(e.code)) keys.up = true;
+            if (['ArrowDown', 'KeyS'].includes(e.code)) keys.down = true;
+            if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = true;
+            if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (['ArrowUp', 'KeyW'].includes(e.code)) keys.up = false;
+            if (['ArrowDown', 'KeyS'].includes(e.code)) keys.down = false;
+            if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = false;
+            if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = false;
+        });
+
+        function handleDpad(dir, isPressed) {
+            if (keys.hasOwnProperty(dir)) {
+                keys[dir] = isPressed;
+            }
+        }
+
+        /* ==========================================================================
+           6. LOGIC & MOVEMENT HELPER FUNCTIONS
+           ========================================================================== */
+        function isWallOrClosedGate(x, y, radius) {
+            // Check 4 corners of bounding box
+            const checkPoints = [
+                { x: x - radius, y: y - radius },
+                { x: x + radius, y: y - radius },
+                { x: x - radius, y: y + radius },
+                { x: x + radius, y: y + radius }
+            ];
+
+            for (let pt of checkPoints) {
+                const col = Math.floor(pt.x / CELL_SIZE);
+                const row = Math.floor(pt.y / CELL_SIZE);
+
+                if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return true;
+
+                const tile = baseMap[row][col];
+                if (tile === 1) return true; // Wall
+
+                // Check gate status
+                if (tile === 2) {
+                    // Check which zone gate belongs to
+                    for (let zKey in zones) {
+                        const z = zones[zKey];
+                        const isZoneGate = z.gates.some(g => g.c === col && g.r === row);
+                        if (isZoneGate && z.status === 'CLOSED_SAFE') {
+                            return true; // Safe closed gate acts as solid wall to monsters/player
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function updatePlayer() {
+            if (gameState.isQuestionAnswered) return;
+
+            let dx = 0;
+            let dy = 0;
+
+            if (keys.up) dy -= player.speed;
+            if (keys.down) dy += player.speed;
+            if (keys.left) dx -= player.speed;
+            if (keys.right) dx += player.speed;
+
+            // Diagonal speed normalize
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.7071;
+                dy *= 0.7071;
+            }
+
+            // Move X
+            if (dx !== 0 && !isWallOrClosedGate(player.x + dx, player.y, player.radius)) {
+                player.x += dx;
+            }
+            // Move Y
+            if (dy !== 0 && !isWallOrClosedGate(player.x, player.y + dy, player.radius)) {
+                player.y += dy;
+            }
+
+            // Check Zone Trigger
+            checkPlayerInZone();
+        }
+
+        function updateMonsters() {
+            monsters.forEach(m => {
+                m.changeTimer--;
+
+                // Decide direction change if timer expires or hits wall
+                let nextX = m.x + m.dirX * m.speed;
+                let nextY = m.y + m.dirY * m.speed;
+
+                if (m.changeTimer <= 0 || isWallOrClosedGate(nextX, nextY, m.radius)) {
+                    // Choose random 4-dir
+                    const dirs = [
+                        { x: 1, y: 0 },
+                        { x: -1, y: 0 },
+                        { x: 0, y: 1 },
+                        { x: 0, y: -1 }
+                    ];
+                    const validDirs = dirs.filter(d => !isWallOrClosedGate(m.x + d.x * m.speed * 3, m.y + d.y * m.speed * 3, m.radius));
+
+                    if (validDirs.length > 0) {
+                        const chosen = validDirs[Math.floor(Math.random() * validDirs.length)];
+                        m.dirX = chosen.x;
+                        m.dirY = chosen.y;
+                    } else {
+                        m.dirX *= -1;
+                        m.dirY *= -1;
+                    }
+                    m.changeTimer = Math.floor(Math.random() * 60) + 40; // 1-2 seconds
+                } else {
+                    m.x = nextX;
+                    m.y = nextY;
+                }
+
+                // Check collision with player
+                if (!gameState.isQuestionAnswered) {
+                    const dist = Math.hypot(player.x - m.x, player.y - m.y);
+                    if (dist < player.radius + m.radius) {
+                        handlePlayerHit();
+                    }
+                }
+            });
+        }
+
+        function handlePlayerHit() {
+            playSound('hit');
+            gameState.lives--;
+            updateHUD();
+
+            if (gameState.lives <= 0) {
+                endGame(false);
+            } else {
+                // Respawn Player to Center
+                player.x = 9.5 * CELL_SIZE;
+                player.y = 7.5 * CELL_SIZE;
+            }
+        }
+
+        function checkPlayerInZone() {
+            const playerCol = Math.floor(player.x / CELL_SIZE);
+            const playerRow = Math.floor(player.y / CELL_SIZE);
+
+            const qObj = quizBank[gameState.currentQuestionIdx];
+
+            for (let zKey in zones) {
+                const z = zones[zKey];
+                if (z.status === 'WRONG_OPEN' || z.status === 'CLOSED_SAFE') continue;
+
+                if (playerCol >= z.colMin && playerCol <= z.colMax &&
+                    playerRow >= z.rowMin && playerRow <= z.rowMax) {
+                    
+                    // Player entered option room!
+                    const selectedOpt = qObj.options.find(o => o.letter === zKey);
+                    if (selectedOpt && selectedOpt.correct) {
+                        // CORRECT ANSWER!
+                        handleCorrectAnswer(zKey, qObj.explanation);
+                    } else {
+                        // WRONG ANSWER!
+                        handleWrongAnswer(zKey);
+                    }
+                    break;
+                }
+            }
+        }
+
+        function handleCorrectAnswer(zoneKey, explanation) {
+            gameState.isQuestionAnswered = true;
+            zones[zoneKey].status = 'CLOSED_SAFE'; // Lock gates to keep monsters out!
+            gameState.score += 100;
+            updateHUD();
+
+            playSound('correct');
+            spawnFireworks(zones[zoneKey]);
+
+            // Show explanation modal
+            document.getElementById('explanation-text').innerText = explanation;
+            document.getElementById('explanation-modal').classList.remove('hidden');
+        }
+
+        function handleWrongAnswer(zoneKey) {
+            zones[zoneKey].status = 'WRONG_OPEN'; // Mark as wrong room
+            playSound('bomb');
+            spawnExplosion(zones[zoneKey]);
+
+            // Knockback player slightly out of room
+            player.x = 9.5 * CELL_SIZE;
+            player.y = 7.5 * CELL_SIZE;
+        }
+
+        function nextQuestion() {
+            document.getElementById('explanation-modal').classList.add('hidden');
+            gameState.currentQuestionIdx++;
+
+            if (gameState.currentQuestionIdx >= quizBank.length) {
+                endGame(true);
+            } else {
+                resetQuestionState();
+            }
+        }
+
+        function resetQuestionState() {
+            gameState.isQuestionAnswered = false;
+            // Reset Zones status
+            for (let zKey in zones) {
+                zones[zKey].status = 'OPEN';
+            }
+            // Center Player & Monsters
+            player.x = 9.5 * CELL_SIZE;
+            player.y = 7.5 * CELL_SIZE;
+
+            monsters[0].x = 5.5 * CELL_SIZE; monsters[0].y = 7.5 * CELL_SIZE;
+            monsters[1].x = 14.5 * CELL_SIZE; monsters[1].y = 7.5 * CELL_SIZE;
+            monsters[2].x = 9.5 * CELL_SIZE; monsters[2].y = 3.5 * CELL_SIZE;
+
+            displayCurrentQuestion();
+        }
+
+        /* ==========================================================================
+           7. FIREWORKS & PARTICLE SYSTEM
+           ========================================================================== */
+        function spawnFireworks(zone) {
+            const centerX = (zone.colMin + zone.colMax) / 2 * CELL_SIZE;
+            const centerY = (zone.rowMin + zone.rowMax) / 2 * CELL_SIZE;
+
+            for (let i = 0; i < 40; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 2;
+                gameState.particles.push({
+                    x: centerX,
+                    y: centerY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 4 + 2,
+                    color: ['#10b981', '#34d399', '#f59e0b', '#3b82f6', '#ec4899'][Math.floor(Math.random() * 5)],
+                    alpha: 1,
+                    life: 1
+                });
+            }
+        }
+
+        function spawnExplosion(zone) {
+            const centerX = (zone.colMin + zone.colMax) / 2 * CELL_SIZE;
+            const centerY = (zone.rowMin + zone.rowMax) / 2 * CELL_SIZE;
+
+            for (let i = 0; i < 30; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                gameState.particles.push({
+                    x: centerX,
+                    y: centerY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 5 + 3,
+                    color: ['#ef4444', '#f97316', '#eab308'][Math.floor(Math.random() * 3)],
+                    alpha: 1,
+                    life: 1
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const p = gameState.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.02;
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                if (p.alpha <= 0) {
+                    gameState.particles.splice(i, 1);
+                }
+            }
+        }
+
+        /* ==========================================================================
+           8. RENDER/DRAWING ENGINE
+           ========================================================================== */
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Maze Tiles & Base Floor
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const tile = baseMap[r][c];
+                    const x = c * CELL_SIZE;
+                    const y = r * CELL_SIZE;
+
+                    if (tile === 1) {
+                        // Wall Tile (Pixelated Dark Slate)
+                        ctx.fillStyle = '#1e293b';
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                        ctx.strokeStyle = '#334155';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+                    } else if (tile === 2) {
+                        // Gate Area
+                        ctx.fillStyle = '#0f172a';
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    } else {
+                        // Floor Path
+                        ctx.fillStyle = '#020617';
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+
+            // 2. Draw Option Zone Chambers (A, B, C, D)
+            const qObj = quizBank[gameState.currentQuestionIdx];
+
+            for (let zKey in zones) {
+                const z = zones[zKey];
+                const optObj = qObj ? qObj.options.find(o => o.letter === zKey) : null;
+                const x = z.colMin * CELL_SIZE;
+                const y = z.rowMin * CELL_SIZE;
+                const w = (z.colMax - z.colMin + 1) * CELL_SIZE;
+                const h = (z.rowMax - z.rowMin + 1) * CELL_SIZE;
+
+                // Zone Floor Color based on status
+                if (z.status === 'CLOSED_SAFE') {
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.25)'; // Green Safe
+                } else if (z.status === 'WRONG_OPEN') {
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.25)'; // Red Wrong
+                } else {
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.12)'; // Amber Default
+                }
+                ctx.fillRect(x, y, w, h);
+
+                // Zone Border
+                ctx.strokeStyle = z.status === 'CLOSED_SAFE' ? '#10b981' : (z.status === 'WRONG_OPEN' ? '#ef4444' : '#f59e0b');
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x, y, w, h);
+
+                // Option Text Inside Room
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(`[ ${z.id} ]`, x + w / 2, y + 20);
+
+                if (optObj) {
+                    ctx.font = '10px Inter';
+                    ctx.fillStyle = z.status === 'WRONG_OPEN' ? '#fca5a5' : '#cbd5e1';
+                    
+                    // Multi-line text wrap inside room
+                    const words = optObj.text.split(' ');
+                    let line = '';
+                    let lineY = y + 38;
+                    for (let n = 0; n < words.length; n++) {
+                        let testLine = line + words[n] + ' ';
+                        if (ctx.measureText(testLine).width > w - 10 && n > 0) {
+                            ctx.fillText(line, x + w / 2, lineY);
+                            line = words[n] + ' ';
+                            lineY += 14;
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    ctx.fillText(line, x + w / 2, lineY);
+                }
+
+                // Draw Status Badges over Room
+                if (z.status === 'CLOSED_SAFE') {
+                    // Lock / Checkmark Icon
+                    ctx.fillStyle = '#10b981';
+                    ctx.font = 'bold 24px FontAwesome';
+                    ctx.fillText('✓ AMAN', x + w / 2, y + h / 2 + 5);
+
+                    // Draw Closed Gates (Barricade)
+                    z.gates.forEach(g => {
+                        ctx.fillStyle = '#10b981';
+                        ctx.fillRect(g.c * CELL_SIZE, g.r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                        ctx.strokeStyle = '#047857';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(g.c * CELL_SIZE, g.r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    });
+                } else if (z.status === 'WRONG_OPEN') {
+                    // Red X / Bomb Icon
+                    ctx.fillStyle = '#ef4444';
+                    ctx.font = 'bold 22px Inter';
+                    ctx.fillText('💣 SALAH', x + w / 2, y + h / 2 + 5);
+                }
+            }
+
+            // 3. Draw Player Hero
+            ctx.fillStyle = '#38bdf8'; // Cyan
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Player Eyes / Direction
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(player.x - 4, player.y - 3, 3, 0, Math.PI * 2);
+            ctx.arc(player.x + 4, player.y - 3, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 4. Draw Monsters
+            monsters.forEach(m => {
+                ctx.fillStyle = '#f43f5e'; // Rose/Red
+                ctx.beginPath();
+                ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#9f1239';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Monster Angry Eyes
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(m.x - 4, m.y - 3, 3, 0, Math.PI * 2);
+                ctx.arc(m.x + 4, m.y - 3, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(m.x - 4, m.y - 3, 1.5, 0, Math.PI * 2);
+                ctx.arc(m.x + 4, m.y - 3, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 5. Render Fireworks / Particle Explosion
+            updateAndDrawParticles();
+        }
+
+        /* ==========================================================================
+           9. MAIN GAME LOOP
+           ========================================================================== */
+        function gameLoop() {
+            if (gameState.isPlaying) {
+                updatePlayer();
+                updateMonsters();
+                render();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* ==========================================================================
+           10. GAME FLOW & CONTROLLER INTEGRATION
+           ========================================================================== */
+        function startGame() {
+            initAudio();
+            startBGM();
+
+            gameState.currentQuestionIdx = 0;
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.isPlaying = true;
+            gameState.isQuestionAnswered = false;
+            gameState.particles = [];
+
+            // UI Overlays
+            document.getElementById('start-overlay').classList.add('hidden');
+            document.getElementById('end-overlay').classList.add('hidden');
+            document.getElementById('explanation-modal').classList.add('hidden');
+            document.getElementById('game-ui-container').classList.remove('hidden');
+
+            resetQuestionState();
+            updateHUD();
+        }
+
+        function displayCurrentQuestion() {
+            const qObj = quizBank[gameState.currentQuestionIdx];
+            document.getElementById('question-category').innerText = `Topik: ${qObj.topic}`;
+            document.getElementById('question-text').innerText = qObj.question;
+            document.getElementById('level-badge').innerText = `SOAL ${gameState.currentQuestionIdx + 1}/${quizBank.length}`;
+        }
+
+        function updateHUD() {
+            document.getElementById('score-display').innerText = gameState.score;
+
+            // Lives Hearts
+            const livesContainer = document.getElementById('lives-display');
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                if (i < gameState.lives) {
+                    livesContainer.innerHTML += `<i class="fa-solid fa-heart text-rose-500"></i>`;
+                } else {
+                    livesContainer.innerHTML += `<i class="fa-regular fa-heart text-slate-600"></i>`;
+                }
+            }
+        }
+
+        function endGame(isVictory) {
+            gameState.isPlaying = false;
+            const endOverlay = document.getElementById('end-overlay');
+            const endIcon = document.getElementById('end-icon');
+            const endTitle = document.getElementById('end-title');
+            const endSub = document.getElementById('end-subtitle');
+
+            document.getElementById('end-score').innerText = gameState.score;
+            document.getElementById('end-questions').innerText = `${gameState.currentQuestionIdx}/${quizBank.length}`;
+
+            if (isVictory) {
+                playSound('victory');
+                endIcon.innerHTML = `<i class="fa-solid fa-trophy text-amber-400"></i>`;
+                endTitle.innerText = "VICTORY!";
+                endTitle.className = "text-2xl font-black font-pixel mb-2 text-amber-400";
+                endSub.innerText = "Selamat! Kamu berhasil menaklukkan semua soal Labirin TKJ!";
+            } else {
+                playSound('bomb');
+                endIcon.innerHTML = `<i class="fa-solid fa-skull text-rose-500"></i>`;
+                endTitle.innerText = "GAME OVER";
+                endTitle.className = "text-2xl font-black font-pixel mb-2 text-rose-500";
+                endSub.innerText = "Kamu tertangkap monster atau kehabisan nyawa. Coba lagi!";
+            }
+
+            endOverlay.classList.remove('hidden');
+        }
+
+        // Initialize Canvas loop on page load
+        window.onload = () => {
+            render();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
