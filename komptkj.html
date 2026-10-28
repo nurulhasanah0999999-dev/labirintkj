@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Susun Kata Subnetting - Game Edukasi Jaringan</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Orbitron & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .tech-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+        }
+        .letter-node {
+            transition: transform 0.15s ease, background-color 0.2s, box-shadow 0.2s;
+        }
+        .letter-node:active, .letter-node.active {
+            transform: scale(1.15);
+            background-color: #0284c7 !important;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.9);
+        }
+        .word-slot {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .word-slot.solved {
+            animation: popIn 0.4s ease-out forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.8); }
+        }
+        .pulse-btn {
+            animation: pulse-glow 2s infinite;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0ea5e9;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-2 sm:p-4 overflow-x-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+
+    <!-- CANVAS BACKGROUND EFFECT -->
+    <canvas id="bgCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+
+    <!-- HEADER HUD -->
+    <header class="w-full max-w-xl glass-card rounded-2xl p-3 z-10 mb-2 shadow-2xl">
+        <div class="flex items-center justify-between gap-2">
+            <!-- LOGO & LEVEL -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-400 text-xl font-bold shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+                    <i class="fa-solid fa-network-wired"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold tech-font text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300 tracking-wider">
+                        SUSUN KATA SUBNET
+                    </h1>
+                    <div class="flex items-center gap-2">
+                        <span id="level-badge" class="bg-cyan-500/20 text-cyan-300 text-xs px-2 py-0.5 rounded-full border border-cyan-400/30 font-semibold tech-font">
+                            Level 1
+                        </span>
+                        <span id="level-title" class="text-[11px] text-cyan-200/80 font-mono">
+                            SUBNET
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATS (COINS & BONUS) -->
+            <div class="flex items-center gap-3 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-coins text-amber-400 text-sm"></i>
+                    <span id="coin-count" class="text-sm font-bold text-amber-300 tech-font">100</span>
+                </div>
+                <div class="w-px h-5 bg-slate-800"></div>
+                <button onclick="toggleBonusModal()" class="flex items-center gap-1 text-xs text-cyan-300 hover:text-white font-mono bg-cyan-950/50 px-2 py-1 rounded-lg border border-cyan-500/30 active:scale-95 transition">
+                    <i class="fa-solid fa-gift text-cyan-400"></i>
+                    <span id="bonus-count">0</span>
+                </button>
+            </div>
+
+            <!-- CONTROLS -->
+            <div class="flex items-center space-x-1.5">
+                <button onclick="toggleCalcModal()" title="Kuis Subnetting Mini" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 border border-indigo-500/40 w-9 h-9 rounded-xl flex items-center justify-center transition active:scale-95 shadow-md">
+                    <i class="fa-solid fa-calculator text-sm"></i>
+                </button>
+                <button id="btn-audio" onclick="toggleAudio()" title="Suara On/Off" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 w-9 h-9 rounded-xl flex items-center justify-center transition active:scale-95 shadow-md">
+                    <i id="icon-audio" class="fa-solid fa-volume-high text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- PROGRESS BAR -->
+        <div class="mt-2.5 relative w-full bg-slate-950 h-2 rounded-full overflow-hidden p-0.5 border border-slate-800">
+            <div id="level-progress" class="h-full bg-gradient-to-r from-cyan-500 via-sky-400 to-indigo-500 rounded-full transition-all duration-300 w-0"></div>
+        </div>
+    </header>
+
+    <!-- MAIN GAME DISPLAY AREA -->
+    <main class="w-full max-w-xl flex flex-col items-center justify-center relative my-auto z-10 px-1">
+        
+        <!-- TARGET WORD SLOTS GRID -->
+        <div id="word-slots-container" class="w-full glass-card rounded-2xl p-4 sm:p-5 mb-3 flex flex-col items-center justify-center min-h-[190px] gap-2.5 shadow-xl">
+            <!-- Dynamic word slot rows generated here -->
+        </div>
+
+        <!-- CURRENT INPUT PREVIEW -->
+        <div class="w-full flex items-center justify-between bg-slate-900/90 border border-cyan-500/30 rounded-xl px-4 py-2.5 mb-3 shadow-lg min-h-[48px]">
+            <button onclick="clearCurrentInput()" class="text-slate-400 hover:text-rose-400 text-sm flex items-center gap-1 active:scale-95 transition">
+                <i class="fa-solid fa-trash-can"></i>
+                <span class="text-xs font-mono hidden sm:inline">Hapus</span>
+            </button>
+
+            <!-- Text container for constructed word -->
+            <div id="input-preview" class="flex gap-1.5 items-center justify-center font-bold tech-font text-lg sm:text-xl text-cyan-300 tracking-wider">
+                <!-- Selected letters render here -->
+            </div>
+
+            <button onclick="submitConstructedWord()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-cyan-400/40 shadow active:scale-95 transition flex items-center gap-1">
+                <span>Kirim</span>
+                <i class="fa-solid fa-paper-plane text-[10px]"></i>
+            </button>
+        </div>
+
+        <!-- WHEEL & ACTION TOOLBAR -->
+        <div class="w-full max-w-md flex items-center justify-between gap-3 px-2">
+            
+            <!-- HINT BUTTON -->
+            <button onclick="useHint()" class="flex flex-col items-center justify-center bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 text-amber-300 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl shadow-lg active:scale-95 transition">
+                <i class="fa-solid fa-lightbulb text-lg text-amber-400 mb-0.5"></i>
+                <span class="text-[10px] font-mono font-bold">50 <i class="fa-solid fa-coins text-[8px]"></i></span>
+            </button>
+
+            <!-- CIRCULAR LETTER WHEEL / BLOCK AREA -->
+            <div id="letter-wheel" class="relative w-48 h-48 sm:w-56 sm:h-56 rounded-full bg-slate-900/80 border-2 border-cyan-500/40 flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.15)]">
+                <!-- SVG Connecting line preview -->
+                <svg id="wheel-svg" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
+                
+                <!-- Dynamic Letter Nodes placed radially or in grid -->
+                <div id="letter-nodes-container" class="absolute inset-0 z-10"></div>
+            </div>
+
+            <!-- SHUFFLE BUTTON -->
+            <button onclick="shuffleWheel()" class="flex flex-col items-center justify-center bg-slate-900/90 hover:bg-slate-800 border border-indigo-500/40 text-indigo-300 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl shadow-lg active:scale-95 transition">
+                <i class="fa-solid fa-shuffle text-lg text-indigo-400 mb-0.5"></i>
+                <span class="text-[10px] font-mono font-bold">Acak</span>
+            </button>
+
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full text-center text-[11px] text-cyan-200/50 py-2 font-mono z-10">
+        Susun Kata Subnetting &copy; TKJ / Teknik Komputer & Jaringan Edition
+    </footer>
+
+    <!-- MODAL 1: FACT / EXPLANATION MODAL -->
+    <div id="fact-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card max-w-md w-full rounded-2xl p-5 border border-cyan-400/50 shadow-2xl flex flex-col items-center text-center relative animate-pop">
+            <div class="w-16 h-16 bg-cyan-500/20 border-2 border-cyan-400 rounded-2xl flex items-center justify-center text-cyan-300 text-3xl mb-3 shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h3 id="fact-title" class="text-xl font-bold text-cyan-300 tech-font mb-2">FAKTA SUBNETTING</h3>
+            <p id="fact-body" class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-5 font-sans bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 text-left">
+                <!-- Fact text rendered here -->
+            </p>
+            <button onclick="closeFactModal()" class="w-full pulse-btn bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold py-3 rounded-xl tech-font text-xs uppercase tracking-wider shadow-lg active:scale-95 transition">
+                Lanjut Permainan <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: LEVEL COMPLETE / WIN MODAL -->
+    <div id="win-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card max-w-md w-full rounded-2xl p-6 border border-emerald-500/50 shadow-2xl flex flex-col items-center text-center relative">
+            <div class="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-400 rounded-3xl flex items-center justify-center text-emerald-400 text-4xl mb-3 animate-bounce shadow-[0_0_25px_rgba(16,185,129,0.4)]">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-300 tech-font mb-1">
+                LEVEL SELESAI!
+            </h2>
+            <p id="win-subtitle" class="text-xs text-slate-300 mb-4 font-mono">Semua kata subnetting berhasil ditemukan!</p>
+            
+            <div class="w-full bg-slate-900/90 border border-slate-800 rounded-xl p-3 mb-5 flex justify-around text-center font-mono">
+                <div>
+                    <span class="text-[10px] text-slate-400 block uppercase">Koin Hadiah</span>
+                    <span class="text-base font-bold text-amber-400">+50 <i class="fa-solid fa-coins text-xs"></i></span>
+                </div>
+                <div class="w-px h-8 bg-slate-800"></div>
+                <div>
+                    <span class="text-[10px] text-slate-400 block uppercase">Bonus Kata</span>
+                    <span id="win-bonus-count" class="text-base font-bold text-cyan-400">0</span>
+                </div>
+            </div>
+
+            <button onclick="nextLevel()" class="w-full pulse-btn bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white font-bold py-3.5 rounded-xl tech-font text-sm uppercase tracking-wider shadow-lg active:scale-95 transition">
+                LEVEL BERIKUTNYA <i class="fa-solid fa-forward ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: SUBNETTING CALCULATOR / QUIZ MINIGAME -->
+    <div id="calc-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card max-w-md w-full rounded-2xl p-5 border border-indigo-500/50 shadow-2xl flex flex-col relative">
+            <div class="flex justify-between items-center border-b border-indigo-500/30 pb-3 mb-3">
+                <h3 class="text-base font-bold tech-font text-indigo-300 flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-indigo-400"></i> KUIS KALKULATOR SUBNET
+                </h3>
+                <button onclick="toggleCalcModal()" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 font-sans text-xs sm:text-sm">
+                <div class="bg-indigo-950/40 border border-indigo-500/30 p-3 rounded-xl">
+                    <span class="text-[10px] text-indigo-300 font-mono block uppercase mb-0.5">Soal Subnetting:</span>
+                    <p id="quiz-question" class="text-sm font-bold text-cyan-300 font-mono">192.168.1.50/26</p>
+                    <p id="quiz-subtext" class="text-[11px] text-slate-300 mt-1">Berapakah jumlah Host Usable (dapat dipakai) pada prefix tersebut?</p>
+                </div>
+
+                <!-- Multiple Choice Options -->
+                <div id="quiz-options" class="grid grid-cols-2 gap-2">
+                    <!-- Dynamic quiz option buttons -->
+                </div>
+
+                <div id="quiz-feedback" class="text-center font-semibold text-xs min-h-[20px] my-1"></div>
+
+                <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 text-[11px] text-slate-400">
+                    <span class="font-bold text-amber-300"><i class="fa-solid fa-circle-info mr-1"></i> Hadiah Kuis:</span>
+                    Jawab benar untuk mendapatkan **+30 Koin Bonus**!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: BONUS WORDS LIST -->
+    <div id="bonus-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card max-w-sm w-full rounded-2xl p-5 border border-cyan-500/50 shadow-2xl flex flex-col relative">
+            <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3 mb-3">
+                <h3 class="text-base font-bold tech-font text-cyan-300 flex items-center gap-2">
+                    <i class="fa-solid fa-gift text-cyan-400"></i> KATA BONUS DITEMUKAN
+                </h3>
+                <button onclick="toggleBonusModal()" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-300 mb-3">Kata valid ekstra di luar kata utama memberikan koin tambahan!</p>
+            <div id="bonus-list" class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-2 bg-slate-900/90 rounded-xl border border-slate-800 text-xs font-mono text-cyan-300 mb-3">
+                <span class="text-slate-500 italic text-xs">Belum ada kata bonus pada level ini.</span>
+            </div>
+            <button onclick="toggleBonusModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold py-2 rounded-xl text-xs tech-font">
+                TUTUP
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT GAME LOGIC -->
+    <script>
+        /* ==========================================================================
+           1. GAME LEVELS & DATA DEFINITION (SUBNETTING & NETWORKING)
+           ========================================================================== */
+        const GAME_LEVELS = [
+            {
+                level: 1,
+                mainWord: "SUBNET",
+                letters: ["S", "U", "B", "N", "E", "T"],
+                targets: [
+                    { word: "SUBNET", hint: "Pembagian jaringan IP utama menjadi sub-jaringan lebih kecil" },
+                    { word: "NET", hint: "Sebutan singkat untuk jaringan (Network)" },
+                    { word: "SUB", hint: "Awalan yang berarti bagian dari sesuatu" },
+                    { word: "SET", hint: "Kumpulan parameter atau konfigurasi" },
+                    { word: "TEN", hint: "Angka 10 (misal: 10BaseT Ethernet)" },
+                    { word: "USE", hint: "Menggunakan resource jaringan" }
+                ],
+                bonus: ["TUB", "BUT", "BET", "NUT", "SUN"],
+                fact: "Subnetting membagi IP Address besar menjadi beberapa Network ID kecil untuk menghemat alokasi IP, meningkatkan keamanan, dan mereduksi broadcast traffic."
+            },
+            {
+                level: 2,
+                mainWord: "PREFIX",
+                letters: ["P", "R", "E", "F", "I", "X"],
+                targets: [
+                    { word: "PREFIX", hint: "Panjang bit network ID dengan notasi garis miring (misal: /24)" },
+                    { word: "FIX", hint: "Memperbaiki atau menentukan nilai tetap" },
+                    { word: "RIP", hint: "Routing Information Protocol (Protokol routing ver 1/2)" },
+                    { word: "PER", hint: "Setiap / per unit transmisi data" }
+                ],
+                bonus: ["REF", "PIE", "FIR", "REP"],
+                fact: "Notasi CIDR Prefix seperti /24 menunjukkan bahwa 24 bit pertama dari 32 bit IPv4 digunakan sebagai Network Mask (255.255.255.0)."
+            },
+            {
+                level: 3,
+                mainWord: "GATEWAY",
+                letters: ["G", "A", "T", "E", "W", "A", "Y"],
+                targets: [
+                    { word: "GATEWAY", hint: "Gerbang keluar masuk paket data antar-jaringan berbeda" },
+                    { word: "GATE", hint: "Gerbang lalu lintas data" },
+                    { word: "WAY", hint: "Jalur transmisi" },
+                    { word: "AGE", hint: "Waktu penuaan entry pada tabel ARP/MAC" },
+                    { word: "GET", hint: "Metode request HTTP untuk mengambil data" }
+                ],
+                bonus: ["TAG", "EAT", "TEA", "WET"],
+                fact: "Default Gateway biasanya menggunakan IP usable pertama atau terakhir dalam subnet (contoh: 192.168.1.1/24) untuk meneruskan lalu lintas luar lokal."
+            },
+            {
+                level: 4,
+                mainWord: "OCTET",
+                letters: ["O", "C", "T", "E", "T"],
+                targets: [
+                    { word: "OCTET", hint: "Grup 8-bit dalam alamat IPv4 (total ada 4 oktet)" },
+                    { word: "TOTE", hint: "Membawa payload data" },
+                    { word: "TOE", hint: "Bagian ujung link komunikasi" }
+                ],
+                bonus: ["COT", "TO": "COT"],
+                fact: "Setiap alamat IPv4 terdiri dari 32 bit yang dibagi menjadi 4 Oktet (tiap oktet bernilai 0 hingga 255 dalam desimal)."
+            },
+            {
+                level: 5,
+                mainWord: "BROADCAST",
+                letters: ["B", "R", "O", "A", "D", "C", "A", "S", "T"],
+                targets: [
+                    { word: "BROADCAST", hint: "Alamat IP terakhir dalam subnet untuk kirim data ke semua host" },
+                    { word: "BROAD", hint: "Cakupan jaringan yang luas" },
+                    { word: "CAST", hint: "Meneruskan transmisi sinyal" },
+                    { word: "ROAD", hint: "Jalur routing data" },
+                    { word: "COAST", hint: "Batas tepi segmen jaringan" },
+                    { word: "CATS", hint: "Kategori kabel UTP (misal: Cat5e, Cat6)" }
+                ],
+                bonus: ["STAR", "BOARD", "COAT", "BOAR", "CART", "CARD"],
+                fact: "Alamat Broadcast tidak dapat dialokasikan ke komputer/host. Contoh pada 192.168.1.0/24, IP Broadcast-nya adalah 192.168.1.255."
+            },
+            {
+                level: 6,
+                mainWord: "WILDCARD",
+                letters: ["W", "I", "L", "D", "C", "A", "R", "D"],
+                targets: [
+                    { word: "WILDCARD", hint: "Kebalikan dari Subnet Mask (digunakan pada OSPF & Access List)" },
+                    { word: "CARD", hint: "Kartu antarmuka jaringan (NIC)" },
+                    { word: "WILD", hint: "Nilai wildcard bit bebas (0/1)" },
+                    { word: "DRAW", hint: "Membuat pemetaan topologi" },
+                    { word: "DIAL", hint: "Koneksi dial-up lama" }
+                ],
+                bonus: ["COLD", "LARD", "WARD", "CLAW", "ACID"],
+                fact: "Wildcard Mask dihitung dengan rumus (255.255.255.255 - Subnet Mask). Contoh: Subnet 255.255.255.0 memiliki Wildcard Mask 0.0.0.255."
+            }
+        ];
+
+        const SUBNET_QUIZZES = [
+            { question: "192.168.1.0/24", text: "Berapakah jumlah total Usable Host?", ans: "254", options: ["256", "254", "128", "512"] },
+            { question: "Prefix /26 (Subnet Mask)", text: "Apakah nilai desimal dari prefix /26?", ans: "255.255.255.192", options: ["255.255.255.128", "255.255.255.192", "255.255.255.224", "255.255.255.240"] },
+            { question: "10.0.0.0/30", text: "Berapa jumlah Usable Host pada subnet /30 point-to-point?", ans: "2", options: ["2", "4", "6", "8"] },
+            { question: "Wildcard Mask /28", text: "Subnet mask /28 adalah 255.255.255.240. Berapakah Wildcard Mask-nya?", ans: "0.0.0.15", options: ["0.0.0.255", "0.0.0.15", "0.0.0.31", "0.0.0.63"] }
+        ];
+
+        /* ==========================================================================
+           2. STATE MANAGEMENT
+           ========================================================================== */
+        let currentLevelIdx = 0;
+        let coins = 100;
+        let solvedWords = [];
+        let foundBonusWords = [];
+        let constructedWord = [];
+        let activeNodeIndices = [];
+        let isMuted = false;
+        let currentQuizIdx = 0;
+
+        /* ==========================================================================
+           3. AUDIO SYNTHESIZER (WEB AUDIO API)
+           ========================================================================== */
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleAudio() {
+            isMuted = !isMuted;
+            document.getElementById('icon-audio').className = isMuted ? "fa-solid fa-volume-xmark text-slate-500 text-sm" : "fa-solid fa-volume-high text-cyan-300 text-sm";
+        }
+
+        function playSound(type) {
+            if (isMuted) return;
+            initAudio();
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            switch(type) {
+                case 'tap':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now); osc.stop(now + 0.05);
+                    break;
+
+                case 'match':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                    break;
+
+                case 'bonus':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, now); // A5
+                    osc.frequency.setValueAtTime(1174.66, now + 0.1); // D6
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                    break;
+
+                case 'wrong':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(160, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+                    osc.start(now); osc.stop(now + 0.22);
+                    break;
+
+                case 'shuffle':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.linearRampToValueAtTime(600, now + 0.15);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now); osc.stop(now + 0.15);
+                    break;
+
+                case 'win':
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, i) => {
+                        const oscV = audioCtx.createOscillator();
+                        const gainV = audioCtx.createGain();
+                        oscV.connect(gainV);
+                        gainV.connect(audioCtx.destination);
+                        oscV.type = 'triangle';
+                        oscV.frequency.setValueAtTime(freq, now + i * 0.09);
+                        gainV.gain.setValueAtTime(0.2, now + i * 0.09);
+                        gainV.gain.exponentialRampToValueAtTime(0.01, now + i * 0.09 + 0.25);
+                        oscV.start(now + i * 0.09);
+                        oscV.stop(now + i * 0.09 + 0.25);
+                    });
+                    break;
+            }
+        }
+
+        /* ==========================================================================
+           4. GAME RENDER & UI CONTROLS
+           ========================================================================== */
+        function loadLevel(levelIdx) {
+            currentLevelIdx = levelIdx;
+            const levelData = GAME_LEVELS[currentLevelIdx];
+
+            solvedWords = [];
+            foundBonusWords = [];
+            constructedWord = [];
+            activeNodeIndices = [];
+
+            // Update Header HUD
+            document.getElementById('level-badge').innerText = `Level ${levelData.level}`;
+            document.getElementById('level-title').innerText = levelData.mainWord;
+            document.getElementById('bonus-count').innerText = foundBonusWords.length;
+            updateProgressBar();
+
+            // Render Target Word Slots
+            renderWordSlots();
+
+            // Render Circular Letter Wheel
+            renderLetterWheel();
+
+            // Clear Input Preview
+            updateInputPreview();
+        }
+
+        function renderWordSlots() {
+            const container = document.getElementById('word-slots-container');
+            container.innerHTML = '';
+
+            const levelData = GAME_LEVELS[currentLevelIdx];
+
+            levelData.targets.forEach((targetObj, tIdx) => {
+                const targetWord = targetObj.word;
+                const isSolved = solvedWords.includes(targetWord);
+
+                const rowDiv = document.createElement('div');
+                rowDiv.className = `flex items-center gap-1.5 sm:gap-2 justify-center my-0.5 word-slot ${isSolved ? 'solved' : ''}`;
+
+                for (let i = 0; i < targetWord.length; i++) {
+                    const charBox = document.createElement('div');
+                    
+                    if (isSolved) {
+                        charBox.className = "w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-b from-cyan-500 to-blue-600 text-white font-bold tech-font flex items-center justify-center text-xs sm:text-base border border-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.5)]";
+                        charBox.innerText = targetWord[i];
+                    } else {
+                        // Check if individual letter was revealed by hint
+                        const key = `${tIdx}_${i}`;
+                        const revealedLetter = window.revealedLetters && window.revealedLetters[key];
+
+                        if (revealedLetter) {
+                            charBox.className = "w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-amber-950/80 text-amber-300 font-bold tech-font flex items-center justify-center text-xs sm:text-base border border-amber-500/50";
+                            charBox.innerText = revealedLetter;
+                        } else {
+                            charBox.className = "w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-slate-900/90 border border-cyan-500/30 flex items-center justify-center text-slate-700 font-bold text-xs";
+                            charBox.innerText = "•";
+                        }
+                    }
+                    rowDiv.appendChild(charBox);
+                }
+
+                // Add hint tooltip icon if solved
+                if (isSolved) {
+                    const infoBtn = document.createElement('button');
+                    infoBtn.className = "ml-1 text-cyan-400 hover:text-cyan-200 text-xs";
+                    infoBtn.title = targetObj.hint;
+                    infoBtn.onclick = () => showFactModal(targetObj.word, targetObj.hint);
+                    infoBtn.innerHTML = `<i class="fa-solid fa-circle-info"></i>`;
+                    rowDiv.appendChild(infoBtn);
+                }
+
+                container.appendChild(rowDiv);
+            });
+        }
+
+        function renderLetterWheel() {
+            const container = document.getElementById('letter-nodes-container');
+            container.innerHTML = '';
+
+            const levelData = GAME_LEVELS[currentLevelIdx];
+            const letters = levelData.letters;
+            const count = letters.length;
+
+            // Dimensions
+            const radius = window.innerWidth < 640 ? 70 : 88; // Radial radius in px
+            const centerX = window.innerWidth < 640 ? 96 : 112; // Center offset
+            const centerY = window.innerWidth < 640 ? 96 : 112;
+
+            letters.forEach((char, idx) => {
+                const angle = (idx * (2 * Math.PI / count)) - (Math.PI / 2);
+                const x = centerX + radius * Math.cos(angle) - 20; // 20 is half node width
+                const y = centerY + radius * Math.sin(angle) - 20;
+
+                const nodeBtn = document.createElement('button');
+                const isActive = activeNodeIndices.includes(idx);
+
+                nodeBtn.className = `letter-node absolute w-10 h-10 sm:w-11 sm:h-11 rounded-2xl font-black tech-font text-base sm:text-lg flex items-center justify-center shadow-lg border active:scale-110 ${
+                    isActive 
+                    ? 'bg-cyan-600 text-white border-cyan-300 active shadow-[0_0_15px_rgba(6,182,212,0.8)] z-20' 
+                    : 'bg-slate-900/90 text-cyan-200 border-cyan-500/40 hover:border-cyan-400 z-10'
+                }`;
+                nodeBtn.style.left = `${x}px`;
+                nodeBtn.style.top = `${y}px`;
+                nodeBtn.innerText = char;
+
+                nodeBtn.onclick = () => selectLetterNode(idx, char);
+
+                container.appendChild(nodeBtn);
+            });
+        }
+
+        function selectLetterNode(idx, char) {
+            if (activeNodeIndices.includes(idx)) return; // Prevents duplicate node picking
+
+            playSound('tap');
+            activeNodeIndices.push(idx);
+            constructedWord.push(char);
+
+            updateInputPreview();
+            renderLetterWheel();
+            drawSvgLines();
+        }
+
+        function updateInputPreview() {
+            const previewContainer = document.getElementById('input-preview');
+            previewContainer.innerHTML = '';
+
+            if (constructedWord.length === 0) {
+                previewContainer.innerHTML = `<span class="text-xs text-slate-500 font-mono italic">Pilih huruf di bawah...</span>`;
+                return;
+            }
+
+            constructedWord.forEach(char => {
+                const letterBox = document.createElement('span');
+                letterBox.className = "w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/60 flex items-center justify-center text-cyan-300 font-bold tech-font shadow";
+                letterBox.innerText = char;
+                previewContainer.appendChild(letterBox);
+            });
+        }
+
+        function clearCurrentInput() {
+            if (constructedWord.length === 0) return;
+            playSound('tap');
+            constructedWord = [];
+            activeNodeIndices = [];
+            updateInputPreview();
+            renderLetterWheel();
+            drawSvgLines();
+        }
+
+        function submitConstructedWord() {
+            if (constructedWord.length === 0) return;
+
+            const userWord = constructedWord.join('');
+            const levelData = GAME_LEVELS[currentLevelIdx];
+
+            // 1. Check Target Words
+            const matchedTarget = levelData.targets.find(t => t.word === userWord);
+
+            if (matchedTarget) {
+                if (!solvedWords.includes(userWord)) {
+                    // Correct New Word!
+                    solvedWords.push(userWord);
+                    playSound('match');
+                    coins += 15;
+                    updateCoins();
+                    updateProgressBar();
+
+                    // Flash fact tooltip modal briefly or auto show
+                    showFactModal(matchedTarget.word, matchedTarget.hint);
+
+                    // Check level completion
+                    if (solvedWords.length === levelData.targets.length) {
+                        setTimeout(() => handleLevelVictory(), 600);
+                    }
+                } else {
+                    playSound('wrong'); // Already solved
+                }
+            } 
+            // 2. Check Bonus Words
+            else if (levelData.bonus.includes(userWord)) {
+                if (!foundBonusWords.includes(userWord)) {
+                    foundBonusWords.push(userWord);
+                    playSound('bonus');
+                    coins += 20;
+                    updateCoins();
+                    document.getElementById('bonus-count').innerText = foundBonusWords.length;
+                    updateBonusModalList();
+                } else {
+                    playSound('wrong');
+                }
+            } 
+            // 3. Incorrect Word
+            else {
+                playSound('wrong');
+            }
+
+            // Reset selection input
+            constructedWord = [];
+            activeNodeIndices = [];
+            updateInputPreview();
+            renderWordSlots();
+            renderLetterWheel();
+            drawSvgLines();
+        }
+
+        function shuffleWheel() {
+            playSound('shuffle');
+            const levelData = GAME_LEVELS[currentLevelIdx];
+            // Fisher-Yates shuffle letters
+            for (let i = levelData.letters.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [levelData.letters[i], levelData.letters[j]] = [levelData.letters[j], levelData.letters[i]];
+            }
+            clearCurrentInput();
+        }
+
+        function useHint() {
+            if (coins < 50) {
+                playSound('wrong');
+                alert("Koin tidak cukup! Selesaikan kuis atau temukan kata bonus.");
+                return;
+            }
+
+            const levelData = GAME_LEVELS[currentLevelIdx];
+            
+            // Find first unsolved target word
+            let unrevealedSlot = null;
+            for (let tIdx = 0; tIdx < levelData.targets.length; tIdx++) {
+                const tWord = levelData.targets[tIdx].word;
+                if (!solvedWords.includes(tWord)) {
+                    for (let cIdx = 0; cIdx < tWord.length; cIdx++) {
+                        const key = `${tIdx}_${cIdx}`;
+                        if (!window.revealedLetters) window.revealedLetters = {};
+                        if (!window.revealedLetters[key]) {
+                            unrevealedSlot = { tIdx, cIdx, char: tWord[cIdx], key };
+                            break;
+                        }
+                    }
+                }
+                if (unrevealedSlot) break;
+            }
+
+            if (unrevealedSlot) {
+                coins -= 50;
+                updateCoins();
+                playSound('tap');
+                window.revealedLetters[unrevealedSlot.key] = unrevealedSlot.char;
+                renderWordSlots();
+            }
+        }
+
+        function updateCoins() {
+            document.getElementById('coin-count').innerText = coins;
+        }
+
+        function updateProgressBar() {
+            const levelData = GAME_LEVELS[currentLevelIdx];
+            const pct = (solvedWords.length / levelData.targets.length) * 100;
+            document.getElementById('level-progress').style.width = `${pct}%`;
+        }
+
+        function drawSvgLines() {
+            const svg = document.getElementById('wheel-svg');
+            svg.innerHTML = '';
+            if (activeNodeIndices.length < 2) return;
+
+            const nodes = document.querySelectorAll('.letter-node');
+            const wheelRect = document.getElementById('letter-wheel').getBoundingClientRect();
+
+            let pathD = '';
+            activeNodeIndices.forEach((nodeIdx, i) => {
+                const node = nodes[nodeIdx];
+                if (!node) return;
+                const rect = node.getBoundingClientRect();
+                const x = rect.left + rect.width / 2 - wheelRect.left;
+                const y = rect.top + rect.height / 2 - wheelRect.top;
+
+                if (i === 0) pathD += `M ${x} ${y}`;
+                else pathD += ` L ${x} ${y}`;
+            });
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', pathD);
+            path.setAttribute('stroke', '#06b6d4');
+            path.setAttribute('stroke-width', '4');
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke-linecap', 'round');
+            path.setAttribute('stroke-linejoin', 'round');
+            path.setAttribute('opacity', '0.8');
+
+            svg.appendChild(path);
+        }
+
+        /* ==========================================================================
+           5. MODAL DIALOGS & QUIZ LOGIC
+           ========================================================================== */
+        function showFactModal(word, hint) {
+            const levelData = GAME_LEVELS[currentLevelIdx];
+            document.getElementById('fact-title').innerText = `KATA: ${word}`;
+            document.getElementById('fact-body').innerHTML = `
+                <strong class="text-cyan-300 block mb-1"><i class="fa-solid fa-bookmark mr-1"></i> Definisi:</strong> ${hint}
+                <br><br>
+                <strong class="text-emerald-300 block mb-1"><i class="fa-solid fa-lightbulb mr-1"></i> Penjelasan Subnetting:</strong> ${levelData.fact}
+            `;
+            document.getElementById('fact-modal').classList.remove('hidden');
+        }
+
+        function closeFactModal() {
+            document.getElementById('fact-modal').classList.add('hidden');
+        }
+
+        function handleLevelVictory() {
+            playSound('win');
+            triggerFireworks();
+            coins += 50;
+            updateCoins();
+
+            document.getElementById('win-bonus-count').innerText = foundBonusWords.length;
+            document.getElementById('win-modal').classList.remove('hidden');
+        }
+
+        function nextLevel() {
+            document.getElementById('win-modal').classList.add('hidden');
+            window.revealedLetters = {};
+            if (currentLevelIdx + 1 < GAME_LEVELS.length) {
+                loadLevel(currentLevelIdx + 1);
+            } else {
+                alert("Selamat! Anda telah menyelesaikan seluruh level Susun Kata Subnetting!");
+                loadLevel(0);
+            }
+        }
+
+        function toggleBonusModal() {
+            const modal = document.getElementById('bonus-modal');
+            modal.classList.toggle('hidden');
+            updateBonusModalList();
+        }
+
+        function updateBonusModalList() {
+            const listDiv = document.getElementById('bonus-list');
+            if (foundBonusWords.length === 0) {
+                listDiv.innerHTML = `<span class="text-slate-500 italic text-xs">Belum ada kata bonus pada level ini.</span>`;
+            } else {
+                listDiv.innerHTML = foundBonusWords.map(w => `<span class="bg-cyan-950/80 border border-cyan-500/40 px-2 py-1 rounded-md font-bold">${w}</span>`).join('');
+            }
+        }
+
+        function toggleCalcModal() {
+            const modal = document.getElementById('calc-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                loadSubnetQuiz();
+            }
+        }
+
+        function loadSubnetQuiz() {
+            const quiz = SUBNET_QUIZZES[currentQuizIdx % SUBNET_QUIZZES.length];
+            document.getElementById('quiz-question').innerText = quiz.question;
+            document.getElementById('quiz-subtext').innerText = quiz.text;
+            document.getElementById('quiz-feedback').innerText = '';
+
+            const optionsDiv = document.getElementById('quiz-options');
+            optionsDiv.innerHTML = '';
+
+            quiz.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "bg-slate-900 hover:bg-indigo-900/60 border border-indigo-500/40 text-cyan-200 font-bold font-mono py-2.5 px-2 rounded-xl text-xs active:scale-95 transition";
+                btn.innerText = opt;
+                btn.onclick = () => answerQuiz(opt, quiz.ans);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+        function answerQuiz(selected, correct) {
+            const feedback = document.getElementById('quiz-feedback');
+            if (selected === correct) {
+                playSound('match');
+                coins += 30;
+                updateCoins();
+                feedback.className = "text-center font-bold text-xs text-emerald-400 my-1";
+                feedback.innerText = "✓ Benar! +30 Koin ditambahkan!";
+                setTimeout(() => {
+                    currentQuizIdx++;
+                    toggleCalcModal();
+                }, 1200);
+            } else {
+                playSound('wrong');
+                feedback.className = "text-center font-bold text-xs text-rose-400 my-1";
+                feedback.innerText = "✕ Kurang tepat, coba lagi!";
+            }
+        }
+
+        /* ==========================================================================
+           6. BACKGROUND CANVAS & FIREWORKS PARTICLE SYSTEM
+           ========================================================================== */
+        const bgCanvas = document.getElementById('bgCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function triggerFireworks() {
+            for (let i = 0; i < 60; i++) {
+                particles.push({
+                    x: bgCanvas.width / 2,
+                    y: bgCanvas.height / 2,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12,
+                    radius: Math.random() * 3 + 2,
+                    color: ['#06b6d4', '#3b82f6', '#10b981', '#f59e0b', '#ec4899'][Math.floor(Math.random() * 5)],
+                    alpha: 1
+                });
+            }
+        }
+
+        function renderBackgroundAnimation() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+            // Render fireworks particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.02;
+
+                bgCtx.save();
+                bgCtx.globalAlpha = Math.max(0, p.alpha);
+                bgCtx.fillStyle = p.color;
+                bgCtx.beginPath();
+                bgCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                bgCtx.fill();
+                bgCtx.restore();
+
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            requestAnimationFrame(renderBackgroundAnimation);
+        }
+
+        /* INITIALIZATION ON LOAD */
+        window.onload = () => {
+            resizeCanvas();
+            loadLevel(0);
+            requestAnimationFrame(renderBackgroundAnimation);
+        };
+    </script>
+</body>
+</html>
+```
